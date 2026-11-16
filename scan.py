@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
-"""VulnScope CLI - automated web security assessment.
+"""VulnScope Enterprise CLI - automated web security assessment and client report generator.
 
 Usage:
     python scan.py https://example.com --authorized
     python scan.py example.com --deep --subdomains --pitch --client "Acme Ltd"
+    python scan.py --serve --port 8888              # Launch Cyberpunk Studio Web GUI
+    python scan.py --diff scan1.json scan2.json     # Before vs After delta comparison
+    python scan.py --generate-ci github             # Generate CI/CD workflow
 
 Only scan systems you own or have written permission to test.
 """
@@ -17,8 +20,10 @@ from typing import List
 
 from vulnscope import __version__
 from vulnscope.checks import run_all
+from vulnscope.ci import generate_github_workflow, generate_gitlab_ci
 from vulnscope.context import Options, ScanContext
 from vulnscope.crawl import crawl
+from vulnscope.diff import compare_files
 from vulnscope.models import ScanResult, Severity
 from vulnscope.net import Http, normalise_target
 from vulnscope.report import write_reports
@@ -31,7 +36,7 @@ BANNER = r"""
    \ V / | |_| | | | | |___) | (_| (_) | |_) |  __/
     \_/   \__,_|_|_| |_|____/ \___\___/| .__/ \___|
                                        |_|
- automated web security assessment          v{ver}
+ automated web security assessment & studio v{ver}
 """
 
 USE_COLOR = sys.stdout.isatty() and os.environ.get("NO_COLOR") is None
@@ -108,26 +113,39 @@ def export_pdf(html_path: str, pdf_path: str) -> bool:
 def parse_args(argv: List[str]) -> argparse.Namespace:
     p = argparse.ArgumentParser(
         prog="scan.py",
-        description="VulnScope - automated web security assessment with client-ready reporting.",
+        description="VulnScope Enterprise - Automated web security assessment with client-ready reporting & web studio.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""examples:
   python scan.py https://example.com --authorized
   python scan.py example.com --authorized --deep --subdomains
+  python scan.py --serve --port 8888
+  python scan.py --diff reports/scan1.json reports/scan2.json
   python scan.py https://shop.example.com --authorized --pitch \\
       --client "Acme Ltd" --auditor "Your Name" --out reports
 """,
     )
-    p.add_argument("target", help="URL or domain to assess, e.g. https://example.com")
+    p.add_argument("target", nargs="?", default="", help="URL or domain to assess, e.g. https://example.com")
     p.add_argument("-y", "--authorized", action="store_true",
                    help="confirm you have written authorisation (skips the prompt)")
+    p.add_argument("--serve", "--gui", "-s", action="store_true",
+                   help="launch the embedded Cyberpunk Web Studio GUI")
+    p.add_argument("--port", type=int, default=8888, help="port for the web studio GUI (default: 8888)")
+    p.add_argument("--diff", nargs=2, metavar=("BASELINE", "CURRENT"),
+                   help="compare two scan JSON results to compute the remediation delta")
+    p.add_argument("--generate-ci", choices=["github", "gitlab"],
+                   help="generate CI/CD security gate configuration")
+
     p.add_argument("-o", "--out", default="reports", help="output directory (default: reports)")
-    p.add_argument("--formats", default="html,json,md", help="comma separated: html,json,md")
+    p.add_argument("--formats", default="html,json,md,sarif,csv",
+                   help="comma separated: html,json,md,sarif,csv,proposal")
     p.add_argument("--pdf", action="store_true",
                    help="also export a PDF via headless Chrome/Edge (if installed)")
     p.add_argument("--pitch", action="store_true",
-                   help="include the 'recommended engagement' section in the report")
+                   help="include the 'recommended engagement' and financial ROI section")
     p.add_argument("--client", default="", help="client name shown on the cover")
     p.add_argument("--auditor", default="", help="your name / company shown on the cover")
+    p.add_argument("--profile", default="standard", choices=["fast", "standard", "deep", "api"],
+                   help="scan profile: fast, standard, deep, api")
 
     p.add_argument("--deep", action="store_true",
                    help="enable slower blind checks (time-based SQLi)")
@@ -157,6 +175,52 @@ def main(argv: List[str]) -> int:
     else:
         say(BANNER.format(ver=__version__))
 
+    # Mode 1: Web Studio GUI
+    if args.serve:
+        from vulnscope.server import start_server
+        start_server(port=args.port)
+        return 0
+
+    # Mode 2: CI/CD Workflow Generation
+    if args.generate_ci:
+        if args.generate_ci == "github":
+            content = generate_github_workflow()
+            out_file = ".github/workflows/vulnscope.yml"
+            os.makedirs(".github/workflows", exist_ok=True)
+            with open(out_file, "w", encoding="utf-8") as fh:
+                fh.write(content)
+            say(c(f"  [+] Generated GitHub Actions security workflow in: {out_file}", "1;32"))
+        elif args.generate_ci == "gitlab":
+            content = generate_gitlab_ci()
+            out_file = ".gitlab-ci.yml"
+            with open(out_file, "w", encoding="utf-8") as fh:
+                fh.write(content)
+            say(c(f"  [+] Generated GitLab CI security configuration in: {out_file}", "1;32"))
+        return 0
+
+    # Mode 3: Delta Comparison
+    if args.diff:
+        b_file, c_file = args.diff
+        if not os.path.exists(b_file) or not os.path.exists(c_file):
+            say(c("  ! Both baseline and current scan files must exist.", "1;31"))
+            return 2
+        diff = compare_files(b_file, c_file)
+        say(c(f"\n  ── Delta Remediation Report: {diff.target} ──", "1;37"))
+        say(f"  Baseline Score: {diff.baseline_score}/100 (Grade {diff.baseline_grade})")
+        say(f"  Current Score : {diff.current_score}/100 (Grade {diff.current_grade})")
+        say(f"  Risk Delta    : {c(f'{diff.score_change:+d} points', '1;32' if diff.score_change < 0 else '1;31')}")
+        say(f"  Resolved Bugs : {c(str(len(diff.resolved)), '1;32')} fixed")
+        say(f"  Persistent    : {len(diff.persistent)} open")
+        say(f"  New Bugs      : {c(str(len(diff.new_findings)), '1;31') if diff.new_findings else '0'}")
+        say(f"  Verdict       : {diff.verdict}\n")
+        return 0
+
+    # Mode 4: Target Assessment
+    if not args.target:
+        say(c("  ! Error: Please specify a target URL, or run with --serve for the Web Studio.", "1;31"))
+        say("    Usage: python scan.py https://target.com --authorized")
+        return 2
+
     base_url, host = normalise_target(args.target)
     if not host:
         say(c("  ! could not parse a hostname from the target", "1;31"))
@@ -175,15 +239,17 @@ def main(argv: List[str]) -> int:
     if args.cookie:
         headers["Cookie"] = args.cookie
 
+    is_deep = args.deep or (args.profile == "deep")
     options = Options(
-        deep=args.deep,
-        test_forms=args.test_forms,
-        subdomains=args.subdomains,
-        max_pages=args.max_pages,
+        deep=is_deep,
+        test_forms=args.test_forms or (args.profile in ("deep", "standard")),
+        subdomains=args.subdomains or (args.profile == "deep"),
+        max_pages=15 if args.profile == "fast" else args.max_pages,
         depth=args.depth,
         delay=args.delay,
         timeout=args.timeout,
         threads=args.threads,
+        profile=args.profile,
     )
     http = Http(
         timeout=args.timeout,
@@ -194,7 +260,7 @@ def main(argv: List[str]) -> int:
     )
 
     result = ScanResult(target=base_url, host=host, started=time.time(),
-                        auditor=args.auditor, client=args.client)
+                        auditor=args.auditor, client=args.client, profile=args.profile)
 
     def log(msg: str) -> None:
         if not args.quiet:
@@ -204,11 +270,12 @@ def main(argv: List[str]) -> int:
 
     try:
         log(c(f"\n  Target   {base_url}", "1;37"))
-        log(c(f"  Mode     {'deep' if args.deep else 'standard'}"
-              f"{' + subdomains' if args.subdomains else ''}"
-              f"{' + form testing' if args.test_forms else ''}\n", "0;37"))
+        log(c(f"  Profile  {args.profile.upper()}"
+              f"{' + deep blind checks' if is_deep else ''}"
+              f"{' + subdomains' if options.subdomains else ''}"
+              f"{' + form canary testing' if options.test_forms else ''}\n", "0;37"))
 
-        log(c("[1] Resolving and crawling", "1;36"))
+        log(c("[1] Resolving and crawling attack surface", "1;36"))
         ips = ctx.ips()
         log(f"  IP: {', '.join(ips) if ips else 'unresolved'}")
         if not ips:
@@ -222,7 +289,7 @@ def main(argv: List[str]) -> int:
         result.pages_scanned = [p.url for p in ctx.pages]
         log(f"  crawled {len(ctx.pages)} page(s)\n")
 
-        log(c("[2] Running security checks", "1;36"))
+        log(c("[2] Running 15 security check modules", "1;36"))
         result.findings = run_all(ctx, progress=lambda m: log("  " + m))
         result.metadata = ctx.meta
     except KeyboardInterrupt:
@@ -245,8 +312,10 @@ def main(argv: List[str]) -> int:
         say(f"  {label} {n}")
     say("")
     score = result.risk_score()
+    fin = result.financial_risk()
     say(f"  Risk score : {c(str(score) + '/100', '1;37')}   Grade: {c(result.grade(), '1;37')}")
     say(f"  Verdict    : {result.grade_verdict()}")
+    say(f"  Breach Risk: {fin['breach_probability_pct']}% likelihood (${fin['estimated_financial_loss_usd']:,} exposure)")
     say(f"  Requests   : {result.requests_made}   Duration: {result.duration:.1f}s")
 
     top = [f for f in result.sorted_findings() if f.severity.rank >= 4][:5]
@@ -268,13 +337,12 @@ def main(argv: List[str]) -> int:
             else:
                 say(c("  ! no Chrome/Edge found for PDF export - use Print → Save as PDF", "1;33"))
     say("")
-    say(c("  Reports", "1;37"))
+    say(c("  Generated Reports & Artifacts", "1;37"))
     for p in paths:
         say(f"   {p}")
     say("")
-    say(c("  Open the HTML file in a browser and use Print → Save as PDF to hand it to the client.",
-          "0;37"))
-    say("")
+    say(c("  Launch Web Studio to view interactive attack topology & re-test vulnerabilities:", "0;37"))
+    say(c("  python scan.py --serve --port 8888\n", "1;36"))
     return 0
 
 

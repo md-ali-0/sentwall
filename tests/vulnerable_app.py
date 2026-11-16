@@ -33,6 +33,12 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
         pass
 
+    def handle(self):
+        try:
+            super().handle()
+        except (ConnectionResetError, ConnectionAbortedError, BrokenPipeError):
+            pass
+
     # ---------------------------------------------------------------- routes
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)

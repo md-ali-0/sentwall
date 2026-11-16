@@ -1,4 +1,4 @@
-"""Report rendering: a self-contained, print-ready HTML report plus JSON/Markdown."""
+"""Report rendering: a self-contained, print-ready HTML report plus JSON, Markdown, SARIF, and CSV."""
 from __future__ import annotations
 
 import datetime as _dt
@@ -8,6 +8,7 @@ import os
 from typing import Dict, List
 
 from .models import EFFORT_LABEL, SEVERITY_COLOR, Finding, ScanResult, Severity, quick_wins
+from .proposal import generate_proposal_html, generate_proposal_markdown
 
 E = html.escape
 
@@ -16,24 +17,45 @@ CSS = """
   --ink:#0f172a; --body:#25324a; --muted:#64748b; --line:#e2e8f0;
   --bg:#f4f6fa; --card:#ffffff; --accent:#0f766e; --accent-soft:#ecfdf5;
   --critical:#8b1a1a; --high:#c62828; --medium:#d97706; --low:#2563eb; --info:#64748b;
+  --code-bg:#0f172a; --code-text:#e2e8f0;
+}
+[data-theme="dark"]{
+  --ink:#f8fafc; --body:#cbd5e1; --muted:#94a3b8; --line:#334155;
+  --bg:#090d16; --card:#131c2e; --accent:#2dd4bf; --accent-soft:#134e48;
+  --code-bg:#050811; --code-text:#f1f5f9;
 }
 *{box-sizing:border-box}
 body{
   margin:0; background:var(--bg); color:var(--body);
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
   font-size:14px; line-height:1.62; -webkit-font-smoothing:antialiased;
+  transition:background .2s ease, color .2s ease;
 }
-.wrap{max-width:1000px; margin:0 auto; padding:32px 20px 80px}
+.wrap{max-width:1050px; margin:0 auto; padding:32px 20px 80px}
 h1,h2,h3,h4{color:var(--ink); margin:0; line-height:1.3; font-weight:650; letter-spacing:-0.01em}
 p{margin:0 0 12px}
 a{color:var(--accent); text-decoration:none}
 code,pre{font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace}
 pre{
-  background:#0f172a; color:#e2e8f0; padding:14px 16px; border-radius:8px;
+  background:var(--code-bg); color:var(--code-text); padding:14px 16px; border-radius:8px;
   font-size:12px; line-height:1.55; overflow-x:auto; white-space:pre-wrap;
   word-break:break-word; margin:8px 0 0;
 }
-pre.fix{background:#f8fafc; color:#1e293b; border:1px solid var(--line)}
+pre.fix{background:var(--card); color:var(--ink); border:1px solid var(--line)}
+
+/* ---------- top nav & controls ---------- */
+.top-toolbar{display:flex; justify-content:space-between; align-items:center; margin-bottom:18px}
+.brand{font-size:18px; font-weight:800; color:var(--ink); display:flex; align-items:center; gap:8px}
+.brand .dot{width:10px; height:10px; background:var(--accent); border-radius:50%}
+.actions-bar{display:flex; gap:10px; align-items:center}
+.btn{
+  background:var(--card); color:var(--ink); border:1px solid var(--line);
+  padding:6px 14px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer;
+  transition:all .15s ease;
+}
+.btn:hover{border-color:var(--accent); color:var(--accent)}
+.btn-primary{background:var(--accent); color:#fff; border-color:var(--accent)}
+.btn-primary:hover{opacity:.9; color:#fff}
 
 /* ---------- cover ---------- */
 .cover{
@@ -79,7 +101,7 @@ section{margin-bottom:34px}
   justify-content:center; padding:18px}
 .gauge{width:150px; height:150px; border-radius:50%; display:grid; place-items:center; position:relative}
 .gauge .inner{
-  width:112px; height:112px; background:#fff; border-radius:50%;
+  width:112px; height:112px; background:var(--card); border-radius:50%;
   display:grid; place-items:center; text-align:center;
 }
 .gauge .val{font-size:34px; font-weight:750; color:var(--ink); line-height:1}
@@ -88,6 +110,12 @@ section{margin-bottom:34px}
 .stat{background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px 16px}
 .stat .n{font-size:26px; font-weight:750; line-height:1.1}
 .stat .t{font-size:11px; color:var(--muted); letter-spacing:.06em; text-transform:uppercase; margin-top:2px}
+
+/* ---------- financial risk card ---------- */
+.fin-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:14px; margin-top:14px}
+.fin-item{background:var(--accent-soft); border:1px solid var(--line); border-radius:10px; padding:14px 16px}
+.fin-item .lbl{font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin-bottom:4px}
+.fin-item .val{font-size:22px; font-weight:800; color:var(--ink)}
 
 /* ---------- chips / bars ---------- */
 .chip{
@@ -100,9 +128,21 @@ section{margin-bottom:34px}
 .bars{margin-top:6px}
 .bar-row{display:grid; grid-template-columns:78px 1fr 34px; gap:12px; align-items:center;
   margin-bottom:7px; font-size:12px}
-.bar-track{height:9px; background:#eef2f7; border-radius:6px; overflow:hidden}
+.bar-track{height:9px; background:var(--line); border-radius:6px; overflow:hidden}
 .bar-fill{height:100%; border-radius:6px}
 .bar-n{text-align:right; font-weight:700; color:var(--ink)}
+
+/* ---------- interactive filter bar ---------- */
+.filter-bar{display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:16px}
+.filter-pill{
+  background:var(--card); border:1px solid var(--line); padding:6px 14px; border-radius:999px;
+  font-size:12px; font-weight:600; cursor:pointer; color:var(--muted);
+}
+.filter-pill.active{background:var(--accent); color:#fff; border-color:var(--accent)}
+.search-input{
+  flex:1; min-width:200px; background:var(--card); border:1px solid var(--line);
+  padding:8px 14px; border-radius:8px; font-size:13px; color:var(--ink);
+}
 
 /* ---------- table ---------- */
 table{width:100%; border-collapse:collapse; font-size:12.5px}
@@ -110,7 +150,7 @@ th{
   text-align:left; font-size:10px; letter-spacing:.1em; text-transform:uppercase;
   color:var(--muted); border-bottom:2px solid var(--line); padding:8px 10px; font-weight:700;
 }
-td{padding:9px 10px; border-bottom:1px solid #eef2f7; vertical-align:top}
+td{padding:9px 10px; border-bottom:1px solid var(--line); vertical-align:top}
 tr:last-child td{border-bottom:none}
 td.num{text-align:right; white-space:nowrap}
 
@@ -118,173 +158,200 @@ td.num{text-align:right; white-space:nowrap}
 .finding{
   background:var(--card); border:1px solid var(--line); border-left:5px solid var(--info);
   border-radius:10px; padding:20px 22px; margin-bottom:14px; break-inside:avoid;
+  transition:all .15s ease;
 }
 .finding.critical{border-left-color:var(--critical)}
 .finding.high{border-left-color:var(--high)}
 .finding.medium{border-left-color:var(--medium)}
 .finding.low{border-left-color:var(--low)}
-.finding header{display:flex; align-items:flex-start; gap:10px; flex-wrap:wrap; margin-bottom:10px}
-.finding header h3{font-size:16px; flex:1; min-width:240px}
-.finding .tags{font-size:11px; color:var(--muted); display:flex; gap:12px; flex-wrap:wrap; margin-bottom:14px}
-.finding h4{
-  font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted);
-  margin:16px 0 6px; font-weight:700;
-}
-.finding h4:first-of-type{margin-top:0}
-.finding ul{margin:0; padding-left:18px}
-.finding li{margin-bottom:4px}
-.finding ul.evidence li{
-  font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;
-  font-size:11.5px; color:#334155; background:#f8fafc; border:1px solid #eef2f7;
-  border-radius:5px; padding:4px 8px; list-style:none; margin-left:-18px; margin-bottom:5px;
-  word-break:break-all;
-}
-.finding .foot{
-  margin-top:14px; padding-top:10px; border-top:1px dashed var(--line);
-  font-size:11px; color:var(--muted); display:flex; gap:18px; flex-wrap:wrap;
-}
-.kv{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px 22px; margin-top:6px}
-.kv div{font-size:12.5px}
-.kv span{display:block; font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted)}
+.finding.info{border-left-color:var(--info)}
+.finding header{display:flex; align-items:center; gap:10px; margin-bottom:8px}
+.finding header h3{font-size:15px; margin:0}
+.finding .tags{font-size:11px; color:var(--muted); margin-bottom:12px}
+.finding h4{font-size:12px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted);
+  margin:12px 0 4px}
+.finding ul.evidence{margin:0; padding-left:18px; font-family:"SFMono-Regular",Consolas,monospace;
+  font-size:12px; color:var(--ink)}
+.finding ul.evidence li{word-break:break-all; margin-bottom:4px}
+.finding .foot{display:flex; gap:16px; flex-wrap:wrap; margin-top:14px; padding-top:12px;
+  border-top:1px solid var(--line); font-size:11px; color:var(--muted)}
 
-/* ---------- misc ---------- */
-.callout{
-  border-radius:10px; padding:16px 18px; font-size:13px;
-  background:var(--accent-soft); border:1px solid #cdeee2; color:#14532d;
+.poc-box{display:flex; gap:8px; margin-top:10px}
+.btn-copy{
+  background:var(--line); border:none; padding:4px 10px; border-radius:6px;
+  font-size:11px; font-weight:600; cursor:pointer; color:var(--ink);
 }
-.callout.warn{background:#fff7ed; border-color:#fed7aa; color:#7c2d12}
-.note{font-size:12px; color:var(--muted)}
-.two-col{display:grid; grid-template-columns:1fr 1fr; gap:22px}
-@media(max-width:760px){.two-col{grid-template-columns:1fr}}
-.pill-list{display:flex; flex-wrap:wrap; gap:6px; margin-top:8px}
-.pill{background:#f1f5f9; border:1px solid var(--line); border-radius:6px; padding:3px 8px;
-  font-size:11px; color:#334155; font-family:Consolas,monospace}
-footer.rep{margin-top:44px; padding-top:16px; border-top:1px solid var(--line);
-  font-size:11px; color:var(--muted); display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap}
+.btn-copy:hover{background:var(--accent); color:#fff}
+
+/* ---------- pitch cards ---------- */
+.pitch-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:18px; margin-top:20px}
+.pitch-card{
+  background:var(--card); border:1px solid var(--line); border-radius:14px; padding:24px;
+  position:relative; display:flex; flex-direction:column;
+}
+.pitch-card.featured{border:2px solid var(--accent); box-shadow:0 8px 30px rgba(15,118,110,.12)}
+.pkg-badge{display:inline-block; font-size:10px; font-weight:700; text-transform:uppercase;
+  letter-spacing:.1em; color:var(--accent); margin-bottom:8px}
+.pitch-card h3{font-size:18px; margin-bottom:6px}
+.pitch-card .price{font-size:28px; font-weight:800; color:var(--ink); margin:8px 0 2px}
+.pitch-card .hours{font-size:12px; color:var(--muted); margin-bottom:16px}
+.deliverables{margin:0 0 20px; padding-left:18px; font-size:12.5px; flex:1}
+.deliverables li{margin-bottom:8px}
 
 @media print{
-  body{background:#fff; font-size:10.5pt}
-  .wrap{max-width:none; padding:0}
-  .cover{border-radius:0; -webkit-print-color-adjust:exact; print-color-adjust:exact}
-  .page-break{page-break-before:always}
-  .finding,.card,.stat{break-inside:avoid}
-  a{color:inherit}
-  pre{font-size:8.5pt}
+  body{background:#fff; color:#0f172a}
+  .top-toolbar, .filter-bar, .poc-box, .btn{display:none !important}
+  .wrap{max-width:100%; padding:0}
+  .card{border:1px solid #cbd5e1; page-break-inside:avoid}
+  .finding{page-break-inside:avoid}
 }
-@page{size:A4; margin:14mm}
+"""
+
+JS = """
+function setTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('vulnscope_theme', theme);
+}
+function toggleTheme() {
+  const cur = document.documentElement.getAttribute('data-theme') || 'light';
+  setTheme(cur === 'dark' ? 'light' : 'dark');
+}
+function filterSeverity(sev) {
+  document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+  event.target.classList.add('active');
+  document.querySelectorAll('.finding').forEach(el => {
+    if (sev === 'all' || el.classList.contains(sev)) {
+      el.style.display = '';
+    } else {
+      el.style.display = 'none';
+    }
+  });
+}
+function searchFindings() {
+  const q = document.getElementById('findingSearch').value.toLowerCase();
+  document.querySelectorAll('.finding').forEach(el => {
+    const text = el.innerText.toLowerCase();
+    el.style.display = text.includes(q) ? '' : 'none';
+  });
+}
+function copyText(str) {
+  navigator.clipboard.writeText(str).then(() => {
+    alert('Copied to clipboard: ' + str);
+  });
+}
+window.addEventListener('DOMContentLoaded', () => {
+  const saved = localStorage.getItem('vulnscope_theme');
+  if (saved) document.documentElement.setAttribute('data-theme', saved);
+});
 """
 
 
 def _chip(sev: Severity) -> str:
-    return f'<span class="chip {sev.value}">{sev.value}</span>'
+    return f'<span class="chip {sev.value}">{sev.label}</span>'
 
 
-def _gauge(score: int) -> str:
-    color = (
-        SEVERITY_COLOR[Severity.CRITICAL] if score >= 80
-        else SEVERITY_COLOR[Severity.HIGH] if score >= 65
-        else SEVERITY_COLOR[Severity.MEDIUM] if score >= 45
-        else SEVERITY_COLOR[Severity.LOW] if score >= 12
-        else "#0f766e"
-    )
-    deg = score * 3.6
-    return (
-        f'<div class="gauge" style="background:conic-gradient({color} {deg}deg,#e8eef5 {deg}deg)">'
-        f'<div class="inner"><div><div class="val" style="color:{color}">{score}</div>'
-        f'<div class="lbl">risk / 100</div></div></div></div>'
-    )
+def _cover(result: ScanResult) -> str:
+    grade = result.grade()
+    date_str = _dt.datetime.fromtimestamp(result.started).strftime("%d %B %Y")
+    auditor = result.auditor or "Automated Assessment Engine"
+    client = result.client or "Executive Briefing"
+
+    return f"""
+<div class="top-toolbar">
+  <div class="brand"><span class="dot"></span>VulnScope Enterprise</div>
+  <div class="actions-bar">
+    <button class="btn" onclick="toggleTheme()">Toggle Theme</button>
+    <button class="btn btn-primary" onclick="window.print()">Print / PDF</button>
+  </div>
+</div>
+<div class="cover">
+  <div class="kicker">Confidential Security Assessment Report</div>
+  <h1>{E(result.host)}</h1>
+  <div class="target">{E(result.target)}</div>
+  <dl class="grid">
+    <div><dt>Report ID</dt><dd>{E(result.scan_id)}</dd></div>
+    <div><dt>Date</dt><dd>{date_str}</dd></div>
+    <div><dt>Assessed For</dt><dd>{E(client)}</dd></div>
+    <div><dt>Assessor</dt><dd>{E(auditor)}</dd></div>
+    <div><dt>Profile</dt><dd>{E(result.profile.capitalize())}</dd></div>
+    <div><dt>Requests</dt><dd>{result.requests_made}</dd></div>
+  </dl>
+  <div class="grade-badge">
+    <div class="g">{grade}</div>
+    <div class="l">Security Grade</div>
+  </div>
+</div>"""
 
 
-def _bars(counts: Dict[str, int]) -> str:
-    total = sum(counts.values()) or 1
-    rows = []
-    for sev in (Severity.CRITICAL, Severity.HIGH, Severity.MEDIUM, Severity.LOW, Severity.INFO):
-        n = counts[sev.value]
-        pct = max(2.0, n / total * 100) if n else 0
-        rows.append(
-            f'<div class="bar-row"><div>{sev.label}</div>'
-            f'<div class="bar-track"><div class="bar-fill" style="width:{pct:.1f}%;'
-            f'background:{SEVERITY_COLOR[sev]}"></div></div>'
-            f'<div class="bar-n">{n}</div></div>'
-        )
-    return '<div class="bars">' + "".join(rows) + "</div>"
+def _score_overview(result: ScanResult) -> str:
+    score = result.risk_score()
+    counts = result.counts()
+    fin = result.financial_risk()
+
+    # Gauge ring background gradient
+    deg = int(score * 3.6)
+    gauge_bg = f"conic-gradient(#c62828 0deg {deg}deg, var(--line) {deg}deg 360deg)"
+
+    return f"""
+<section>
+  <div class="sec-head"><span class="num">01</span><h2>Executive Security Posture</h2></div>
+  <div class="score-row">
+    <div class="card gauge-box">
+      <div class="gauge" style="background:{gauge_bg}">
+        <div class="inner">
+          <div class="val">{score}</div>
+          <div class="lbl">Risk / 100</div>
+        </div>
+      </div>
+      <div style="margin-top:14px; text-align:center; font-weight:700; color:var(--ink);">
+        {E(result.grade_verdict())}
+      </div>
+    </div>
+    <div class="stat-grid">
+      <div class="stat"><div class="n" style="color:var(--critical)">{counts['critical']}</div><div class="t">Critical</div></div>
+      <div class="stat"><div class="n" style="color:var(--high)">{counts['high']}</div><div class="t">High</div></div>
+      <div class="stat"><div class="n" style="color:var(--medium)">{counts['medium']}</div><div class="t">Medium</div></div>
+      <div class="stat"><div class="n" style="color:var(--low)">{counts['low']}</div><div class="t">Low</div></div>
+      <div class="stat"><div class="n" style="color:var(--info)">{counts['info']}</div><div class="t">Informational</div></div>
+      <div class="stat"><div class="n" style="color:var(--accent)">{len(result.pages_scanned)}</div><div class="t">Pages Audited</div></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:14px">
+    <h3 style="font-size:14px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted)">Financial Risk & Business Impact Forecast</h3>
+    <div class="fin-grid">
+      <div class="fin-item">
+        <div class="lbl">Estimated Breach Likelihood</div>
+        <div class="val" style="color:var(--critical)">{fin['breach_probability_pct']}%</div>
+      </div>
+      <div class="fin-item">
+        <div class="lbl">Estimated Financial Exposure</div>
+        <div class="val" style="color:var(--high)">${fin['estimated_financial_loss_usd']:,}</div>
+      </div>
+      <div class="fin-item">
+        <div class="lbl">Technical Debt / Fix Time</div>
+        <div class="val">{fin['total_remediation_hours']} Hours</div>
+      </div>
+      <div class="fin-item">
+        <div class="lbl">Recommended Urgency</div>
+        <div class="val" style="font-size:16px; color:var(--accent)">{fin['priority_action']}</div>
+      </div>
+    </div>
+  </div>
+</section>"""
 
 
-def _exec_summary(result: ScanResult) -> str:
-    c = result.counts()
-    crit, high, med = c["critical"], c["high"], c["medium"]
-    total = sum(c.values())
-    tech = result.metadata.get("technology") or {}
-
-    if crit or high:
-        opening = (
-            f"The assessment identified <strong>{crit + high} high-impact issue(s)</strong> "
-            f"that should be treated as urgent, alongside {med} medium and "
-            f"{c['low']} low-severity findings."
-        )
-    elif med:
-        opening = (
-            f"No directly exploitable critical flaws were found, but {med} medium-severity "
-            f"issue(s) still weaken the site's defences and should be addressed."
-        )
-    else:
-        opening = "The site shows a solid baseline configuration with only minor hardening opportunities."
-
-    lines = [
-        f"<p>{opening}</p>",
-        f"<p>In total <strong>{total} observations</strong> were recorded against "
-        f"<strong>{E(result.target)}</strong> during a non-intrusive assessment. The overall "
-        f"security score is <strong>{result.risk_score()}/100</strong> "
-        f"(grade {result.grade()}), described as: {E(result.grade_verdict().lower())}.</p>",
-    ]
-
-    top = [f for f in result.sorted_findings() if f.severity.rank >= 3][:3]
-    if top:
-        lines.append("<p>The three items that matter most to the business:</p><ul>")
-        for f in top:
-            lines.append(f"<li><strong>{E(f.title)}</strong> &mdash; {E(_short(f.impact or f.description, 150))}</li>")
-        lines.append("</ul>")
-
-    if tech:
-        shown = {k: v for k, v in tech.items() if not (k == "Server" and len(tech) > 2)}
-        pills = "".join(f'<span class="pill">{E(k)}: {E(str(v))}</span>' for k, v in shown.items())
-        lines.append(f'<p class="note" style="margin-top:14px">Detected stack</p><div class="pill-list">{pills}</div>')
-
-    lines.append(
-        '<div class="callout" style="margin-top:18px"><strong>What this means in practice:</strong> '
-        + (
-            "an attacker with modest skill could likely reach customer data or take over accounts "
-            "using only publicly available tools. Remediation should start this week."
-            if (crit or high) else
-            "the site is not trivially breakable, but the gaps listed below reduce defence in depth "
-            "and should be closed on a normal maintenance cycle."
-        )
-        + "</div>"
-    )
-    return "".join(lines)
-
-
-def _short(text: str, n: int) -> str:
-    text = " ".join(text.split())
-    return text if len(text) <= n else text[: n - 1].rstrip() + "…"
-
-
-def _finding_card(f: Finding, index: int) -> str:
-    evidence = "".join(f"<li>{E(x)}</li>" for x in f.evidence) if f.evidence else "<li>(no evidence recorded)</li>"
+def _finding_card(f: Finding, index: int, target: str) -> str:
+    evidence = "".join(f"<li>{E(x)}</li>" for x in f.evidence) if f.evidence else "<li>(No raw evidence captured)</li>"
     refs = ""
     if f.references:
-        refs = '<h4>References</h4><ul>' + "".join(
-            f'<li><a href="{E(r)}">{E(r)}</a></li>' for r in f.references
-        ) + "</ul>"
+        refs = "<h4>References</h4><ul>" + "".join(f'<li><a href="{E(r)}" target="_blank">{E(r)}</a></li>' for r in f.references) + "</ul>"
 
-    tags = []
-    if f.cvss:
-        tags.append(f"CVSS ~{f.cvss:.1f}")
-    if f.cwe:
-        tags.append(f.cwe)
-    if f.owasp:
-        tags.append(f.owasp)
-    tags.append(f"confidence: {f.confidence}")
+    curl_poc = f.get_poc_curl(target)
+    python_poc = f.get_poc_python(target)
+
+    # Clean patch snippet
+    patch_snippet = f.get_remediation_patch("nginx")
 
     return f"""
 <article class="finding {f.severity.value}">
@@ -292,433 +359,182 @@ def _finding_card(f: Finding, index: int) -> str:
     {_chip(f.severity)}
     <h3>{index}. {E(f.title)}</h3>
   </header>
-  <div class="tags">{' &middot; '.join(E(t) for t in tags)}</div>
-
-  <h4>What we found</h4>
-  <p>{E(f.description)}</p>
-  {f'<h4>Business impact</h4><p>{E(f.impact)}</p>' if f.impact else ''}
-  <h4>Evidence</h4>
-  <ul class="evidence">{evidence}</ul>
-  {f'<h4>How to fix it</h4><pre class="fix">{E(f.remediation)}</pre>' if f.remediation else ''}
-  {refs}
-  <div class="foot">
-    <span><strong>Category:</strong> {E(f.category)}</span>
-    <span><strong>Effort:</strong> {E(f.effort_label)}</span>
-    {f'<span><strong>Location:</strong> {E(f.location)}</span>' if f.location else ''}
+  <div class="tags">
+    <strong>Category:</strong> {E(f.category)} &middot;
+    <strong>CWE:</strong> {E(f.cwe or 'CWE-None')} &middot;
+    <strong>OWASP:</strong> {E(f.owasp or 'OWASP')} &middot;
+    <strong>CVSS:</strong> {f.cvss or 'N/A'} &middot;
+    <strong>Fix Effort:</strong> {E(f.effort_label)}
   </div>
+
+  <h4>What we observed</h4>
+  <p>{E(f.description)}</p>
+
+  {f'<h4>Business Impact</h4><p>{E(f.impact)}</p>' if f.impact else ''}
+
+  <h4>Evidence & Canary Output</h4>
+  <ul class="evidence">{evidence}</ul>
+
+  <h4>Automated Verification PoC</h4>
+  <div class="poc-box">
+    <button class="btn-copy" onclick="copyText({json.dumps(curl_poc)})">Copy cURL Command</button>
+    <button class="btn-copy" onclick="copyText({json.dumps(python_poc)})">Copy Python Script</button>
+  </div>
+  <pre>{E(curl_poc)}</pre>
+
+  <h4>Recommended Remediation Patch</h4>
+  <pre class="fix">{E(patch_snippet)}</pre>
+
+  {refs}
 </article>"""
 
 
-def _summary_table(findings: List[Finding]) -> str:
-    rows = []
-    for i, f in enumerate(findings, 1):
-        rows.append(
-            f"<tr><td class='num'>{i}</td><td>{_chip(f.severity)}</td>"
-            f"<td>{E(f.title)}</td><td>{E(f.category)}</td>"
-            f"<td class='num'>{('%.1f' % f.cvss) if f.cvss else '&ndash;'}</td>"
-            f"<td>{E(EFFORT_LABEL.get(f.effort, f.effort))}</td></tr>"
-        )
-    return (
-        "<table><thead><tr><th>#</th><th>Severity</th><th>Finding</th><th>Category</th>"
-        "<th>CVSS</th><th>Fix effort</th></tr></thead><tbody>"
-        + "".join(rows)
-        + "</tbody></table>"
-    )
-
-
-def _roadmap(result: ScanResult) -> str:
-    wins = quick_wins(result)
-    medium_term = [
-        f for f in result.sorted_findings()
-        if f.severity.rank >= 3 and f.effort in ("moderate", "involved") and f not in wins
-    ]
-    long_term = [f for f in result.sorted_findings() if f.severity.rank <= 2]
-
-    def block(title, subtitle, items):
-        if not items:
-            return ""
-        lis = "".join(f"<li>{_chip(f.severity)} {E(f.title)}</li>" for f in items[:12])
-        return (
-            f'<div class="card"><h3 style="font-size:15px;margin-bottom:4px">{title}</h3>'
-            f'<p class="note" style="margin-bottom:10px">{subtitle}</p>'
-            f'<ul style="margin:0;padding-left:18px">{lis}</ul></div>'
-        )
-
-    parts = [
-        block("Phase 1 &mdash; Immediate (this week)",
-              "High-impact items that are cheap to fix. These alone will move the score the most.",
-              wins),
-        block("Phase 2 &mdash; Short term (2&ndash;4 weeks)",
-              "Structural fixes that need development time or a change in how the app is built.",
-              medium_term),
-        block("Phase 3 &mdash; Ongoing hardening",
-              "Lower-risk items and hygiene improvements to fold into the normal release cycle.",
-              long_term),
-    ]
-    return "".join(parts) or '<div class="card"><p>No remediation items recorded.</p></div>'
-
-
-def _proposal(result: ScanResult) -> str:
-    c = result.counts()
-    wins = len(quick_wins(result))
-    total = sum(c.values())
-    return f"""
-<section class="page-break">
-  <div class="sec-head"><span class="num">07</span><h2>Recommended engagement</h2></div>
-  <div class="card">
-    <p>This report covers <strong>{total} findings</strong>, of which <strong>{wins}</strong> are
-    high-impact and quick to fix. The following packages are structured around that workload.
-    Prices are to be agreed; the scope column is derived from the findings above.</p>
-    <table style="margin-top:14px">
-      <thead><tr><th>Package</th><th>Scope</th><th>Indicative price</th></tr></thead>
-      <tbody>
-        <tr><td><strong>Essential</strong></td>
-            <td>Fix all Critical and High findings ({c['critical'] + c['high']} items), re-test,
-                written verification report</td>
-            <td class="num">___________</td></tr>
-        <tr><td><strong>Complete</strong></td>
-            <td>Everything in Essential plus all Medium findings ({c['medium']} items), security
-                header rollout, dependency upgrades</td>
-            <td class="num">___________</td></tr>
-        <tr><td><strong>Retainer</strong></td>
-            <td>Complete remediation plus monthly re-scan, patch monitoring and a quarterly
-                review call</td>
-            <td class="num">___________</td></tr>
-      </tbody>
-    </table>
-    <h4 style="margin-top:20px">Deliverables</h4>
-    <ul>
-      <li>Fixed code / configuration, deployed and verified on your server</li>
-      <li>A follow-up scan proving each finding is closed (before/after score comparison)</li>
-      <li>Short handover note so your team can maintain the fixes</li>
-    </ul>
-    <h4>Assumptions</h4>
-    <ul>
-      <li>Work is performed on a staging copy where possible, then promoted to production</li>
-      <li>You provide access to the codebase or server configuration for the fixes</li>
-      <li>Third-party services (hosting, DNS, payment gateway) are configured by their owners</li>
-    </ul>
-  </div>
-</section>"""
-
-
-def _appendix(result: ScanResult) -> str:
-    md = result.metadata
-    rows = []
-    for key, label in (
-        ("ip_addresses", "Resolved IPs"),
-        ("allowed_methods", "Allowed HTTP methods"),
-        ("spf", "SPF record"),
-        ("dmarc", "DMARC record"),
-        ("dkim_selectors", "DKIM selectors found"),
-        ("caa", "CAA records"),
-        ("mx", "MX records"),
-        ("waf", "WAF / CDN detected"),
-        ("security_txt", "security.txt present"),
-        ("subdomains", "Subdomains discovered"),
-    ):
-        if key in md and md[key] not in (None, [], "", False):
-            val = md[key]
-            if isinstance(val, list):
-                val = ", ".join(str(v) for v in val[:8]) + (" …" if len(val) > 8 else "")
-            rows.append(f"<tr><td><strong>{label}</strong></td><td>{E(str(val))}</td></tr>")
-
-    tls = md.get("tls") or {}
-    if tls:
-        rows.append(
-            "<tr><td><strong>TLS</strong></td><td>"
-            f"{E(str(tls.get('protocol')))} &middot; {E(str(tls.get('cipher'))) } &middot; "
-            f"expires {E(str(tls.get('not_after'))) } ({tls.get('days_left')} days)</td></tr>"
-        )
-
-    hdrs = md.get("response_headers") or {}
-    hdr_html = "".join(
-        f"<tr><td><code>{E(k)}</code></td><td>{E(str(v)[:160])}</td></tr>" for k, v in hdrs.items()
-    )
-
-    pages = result.pages_scanned[:40]
-    page_html = "".join(f"<li><code>{E(p)}</code></li>" for p in pages)
-
-    return f"""
-<section class="page-break">
-  <div class="sec-head"><span class="num">08</span><h2>Appendix</h2></div>
-  <div class="card">
-    <h3 style="font-size:15px;margin-bottom:10px">Infrastructure observations</h3>
-    <table><tbody>{''.join(rows) or '<tr><td>No data</td></tr>'}</tbody></table>
-  </div>
-  <div class="card">
-    <h3 style="font-size:15px;margin-bottom:10px">Response headers observed</h3>
-    <table><tbody>{hdr_html or '<tr><td>No headers captured</td></tr>'}</tbody></table>
-  </div>
-  <div class="card">
-    <h3 style="font-size:15px;margin-bottom:10px">Pages crawled ({len(result.pages_scanned)})</h3>
-    <ul style="margin:0;padding-left:18px;font-size:12px">{page_html or '<li>none</li>'}</ul>
-  </div>
-</section>"""
-
-
-def _methodology(result: ScanResult) -> str:
-    return f"""
-<section>
-  <div class="sec-head"><span class="num">09</span><h2>Methodology, scope &amp; limitations</h2></div>
-  <div class="card two-col">
-    <div>
-      <h3 style="font-size:14px;margin-bottom:8px">What was tested</h3>
-      <ul style="margin:0;padding-left:18px;font-size:12.5px">
-        <li>Transport encryption, certificate validity and protocol support</li>
-        <li>HTTP security headers, cookie attributes and browser hardening</li>
-        <li>Server configuration: HTTP methods, CORS policy, error handling, host header trust</li>
-        <li>Exposure of backups, configuration files, repositories and admin panels</li>
-        <li>Technology fingerprinting and outdated component detection</li>
-        <li>Client-side content: mixed content, leaked secrets, third-party script integrity</li>
-        <li>DNS and email authentication: SPF, DMARC, DKIM, CAA, DNSSEC</li>
-        <li>Non-destructive injection probes on discovered parameters
-            (reflected XSS, SQL error signatures, open redirect, path traversal, template injection, CRLF)</li>
-      </ul>
-    </div>
-    <div>
-      <h3 style="font-size:14px;margin-bottom:8px">What this scan does not replace</h3>
-      <ul style="margin:0;padding-left:18px;font-size:12.5px">
-        <li>Authenticated testing of logged-in roles and privilege boundaries</li>
-        <li>Business-logic abuse (price manipulation, workflow bypass, race conditions)</li>
-        <li>Mobile application and API client testing</li>
-        <li>Source-code review and infrastructure / network penetration testing</li>
-        <li>Social engineering and physical access</li>
-      </ul>
-      <p class="note" style="margin-top:10px">
-        Findings are based on external observation only. Absence of a finding does not prove
-        absence of a vulnerability.
-      </p>
-    </div>
-  </div>
-  <div class="card">
-    <h3 style="font-size:14px;margin-bottom:8px">How severity is assigned</h3>
-    <table>
-      <tbody>
-        <tr><td style="width:110px">{_chip(Severity.CRITICAL)}</td>
-            <td>Direct path to full compromise or mass data disclosure. Exploitable by an
-                unskilled attacker, often without authentication. Fix immediately.</td></tr>
-        <tr><td>{_chip(Severity.HIGH)}</td>
-            <td>Serious weakness that leads to account or data compromise, or a clear compliance
-                failure. Fix within days.</td></tr>
-        <tr><td>{_chip(Severity.MEDIUM)}</td>
-            <td>Weakens defences or requires chaining with another flaw. Fix within weeks.</td></tr>
-        <tr><td>{_chip(Severity.LOW)}</td>
-            <td>Hardening gap with limited direct impact. Fix on a normal maintenance cycle.</td></tr>
-        <tr><td>{_chip(Severity.INFO)}</td>
-            <td>Observation, best-practice note, or context for the other findings.</td></tr>
-      </tbody>
-    </table>
-  </div>
-  <div class="card">
-    <h3 style="font-size:14px;margin-bottom:8px">Authorisation &amp; conduct</h3>
-    <p style="font-size:12.5px">
-      Testing was carried out with the authorisation of the site owner. All probes were
-      non-destructive: no data was created, modified or deleted, no authentication was bypassed,
-      and no denial-of-service or brute-force activity was performed. Request rate was limited
-      throughout. Scan ID <strong>{E(result.scan_id)}</strong>, performed
-      {E(_dt.datetime.fromtimestamp(result.started).strftime('%d %B %Y, %H:%M'))} in
-      {round(result.duration)}s over {result.requests_made} requests.
-    </p>
-  </div>
-</section>"""
-
-
 def render_html(result: ScanResult, include_proposal: bool = False) -> str:
-    findings = result.sorted_findings()
-    counts = result.counts()
-    date = _dt.datetime.fromtimestamp(result.started).strftime("%d %B %Y")
-    detail = "".join(_finding_card(f, i) for i, f in enumerate(findings, 1))
-    if not detail:
-        detail = '<div class="card"><p>No findings were recorded.</p></div>'
+    cards = "".join(_finding_card(f, i, result.target) for i, f in enumerate(result.sorted_findings(), 1))
+    proposal_sec = generate_proposal_html(result) if include_proposal else ""
 
-    proposal = _proposal(result) if include_proposal else ""
-    sec = 7 if include_proposal else 0
-    appendix_num = "08" if include_proposal else "07"
-    method_num = "09" if include_proposal else "08"
-
-    return f"""<!doctype html>
+    return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Security Assessment &mdash; {E(result.host)}</title>
-<style>{CSS}</style>
+  <meta charset="utf-8">
+  <title>VulnScope Security Assessment - {E(result.host)}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>{CSS}</style>
 </head>
 <body>
 <div class="wrap">
+  {_cover(result)}
+  {_score_overview(result)}
 
-  <div class="cover">
-    <div class="kicker">Web Application Security Assessment</div>
-    <h1>Security Assessment Report</h1>
-    <div class="target">{E(result.target)}</div>
-    <div class="grid">
-      <div><dt>Report ID</dt><dd>{E(result.scan_id)}</dd></div>
-      <div><dt>Date</dt><dd>{E(date)}</dd></div>
-      <div><dt>Prepared for</dt><dd>{E(result.client or 'Site Owner')}</dd></div>
-      <div><dt>Prepared by</dt><dd>{E(result.auditor or 'Security Consultant')}</dd></div>
-      <div><dt>Findings</dt><dd>{len(findings)}</dd></div>
+  <section id="findings-section">
+    <div class="sec-head">
+      <span class="num">02</span>
+      <h2>Identified Vulnerabilities & Remediation Steps</h2>
     </div>
-    <div class="grade-badge">
-      <div class="g">{E(result.grade())}</div>
-      <div class="l">Security grade</div>
-    </div>
-  </div>
 
-  <section>
-    <div class="sec-head"><span class="num">01</span><h2>Executive summary</h2></div>
-    <div class="card">{_exec_summary(result)}</div>
-  </section>
-
-  <section>
-    <div class="sec-head"><span class="num">02</span><h2>Risk overview</h2></div>
-    <div class="score-row">
-      <div class="card gauge-box">
-        {_gauge(result.risk_score())}
-        <div style="margin-top:12px;text-align:center;font-size:11.5px;color:var(--muted)">
-          {E(result.grade_verdict())}
-        </div>
-      </div>
-      <div class="stat-grid">
-        <div class="stat"><div class="n" style="color:var(--critical)">{counts['critical']}</div><div class="t">Critical</div></div>
-        <div class="stat"><div class="n" style="color:var(--high)">{counts['high']}</div><div class="t">High</div></div>
-        <div class="stat"><div class="n" style="color:var(--medium)">{counts['medium']}</div><div class="t">Medium</div></div>
-        <div class="stat"><div class="n" style="color:var(--low)">{counts['low']}</div><div class="t">Low</div></div>
-        <div class="stat"><div class="n" style="color:var(--info)">{counts['info']}</div><div class="t">Info</div></div>
-        <div class="stat"><div class="n">{result.requests_made}</div><div class="t">Requests</div></div>
-      </div>
+    <div class="filter-bar">
+      <div class="filter-pill active" onclick="filterSeverity('all')">All ({len(result.findings)})</div>
+      <div class="filter-pill" onclick="filterSeverity('critical')">Critical</div>
+      <div class="filter-pill" onclick="filterSeverity('high')">High</div>
+      <div class="filter-pill" onclick="filterSeverity('medium')">Medium</div>
+      <div class="filter-pill" onclick="filterSeverity('low')">Low</div>
+      <div class="filter-pill" onclick="filterSeverity('info')">Info</div>
+      <input type="text" id="findingSearch" class="search-input" placeholder="Search findings, CVEs, CWEs..." onkeyup="searchFindings()">
     </div>
-    <div class="card" style="margin-top:14px">
-      <h3 style="font-size:14px;margin-bottom:10px">Severity distribution</h3>
-      {_bars(counts)}
+
+    <div class="findings-container">
+      {cards or '<div class="card"><p>No vulnerabilities detected!</p></div>'}
     </div>
   </section>
 
-  <section>
-    <div class="sec-head"><span class="num">03</span><h2>Findings summary</h2></div>
-    <div class="card" style="padding:12px 8px">{_summary_table(findings)}</div>
-  </section>
-
-  <section class="page-break">
-    <div class="sec-head"><span class="num">04</span><h2>Detailed findings</h2></div>
-    {detail}
-  </section>
-
-  <section>
-    <div class="sec-head"><span class="num">05</span><h2>Remediation roadmap</h2></div>
-    {_roadmap(result)}
-  </section>
-
-  <section>
-    <div class="sec-head"><span class="num">06</span><h2>Compliance mapping</h2></div>
-    <div class="card">
-      <p style="font-size:12.5px">Findings mapped to OWASP Top 10 (2021) categories, for use in
-      audits and customer security questionnaires.</p>
-      {_owasp_table(findings)}
-    </div>
-  </section>
-
-  {proposal}
-  {_appendix(result)}
-  {_methodology(result)}
-
-  <footer class="rep">
-    <span>{E(result.scan_id)} &middot; VulnScope automated assessment</span>
-    <span>External, non-intrusive testing &middot; {E(date)}</span>
-  </footer>
+  {proposal_sec}
 </div>
+<script>{JS}</script>
 </body>
 </html>"""
 
 
-def _owasp_table(findings: List[Finding]) -> str:
-    buckets: Dict[str, List[Finding]] = {}
-    for f in findings:
-        key = f.owasp or "Unmapped"
-        buckets.setdefault(key, []).append(f)
-    rows = []
-    for cat in sorted(buckets, key=lambda k: -max(f.severity.rank for f in buckets[k])):
-        items = buckets[cat]
-        worst = max(items, key=lambda f: f.severity.rank).severity
-        rows.append(
-            f"<tr><td>{_chip(worst)}</td><td><strong>{E(cat)}</strong></td>"
-            f"<td class='num'>{len(items)}</td></tr>"
-        )
-    return (
-        "<table style='margin-top:10px'><thead><tr><th>Worst severity</th><th>OWASP category</th>"
-        "<th>Findings</th></tr></thead><tbody>" + "".join(rows) + "</tbody></table>"
-    )
-
-
-# ---------------------------------------------------------------------------
 def render_markdown(result: ScanResult) -> str:
     c = result.counts()
+    fin = result.financial_risk()
     lines = [
-        f"# Security Assessment Report",
+        f"# VulnScope Comprehensive Security Assessment Report",
         "",
-        f"**Target:** {result.target}  ",
-        f"**Report ID:** {result.scan_id}  ",
-        f"**Date:** {_dt.datetime.fromtimestamp(result.started).strftime('%d %B %Y')}  ",
-        f"**Risk score:** {result.risk_score()}/100 (grade {result.grade()})  ",
-        f"**Findings:** {c['critical']} critical, {c['high']} high, {c['medium']} medium, "
-        f"{c['low']} low, {c['info']} info",
+        f"**Target:** `{result.target}`  ",
+        f"**Report ID:** `{result.scan_id}`  ",
+        f"**Audit Date:** {_dt.datetime.fromtimestamp(result.started).strftime('%d %B %Y')}  ",
+        f"**Risk Score:** **{result.risk_score()}/100** (Grade: **{result.grade()}**)  ",
+        f"**Financial Exposure:** **${fin['estimated_financial_loss_usd']:,}** ({fin['breach_probability_pct']}% breach probability)  ",
+        f"**Findings:** {c['critical']} critical, {c['high']} high, {c['medium']} medium, {c['low']} low, {c['info']} info  ",
         "",
         "---",
         "",
-        "## Findings",
+        "## 1. Findings Summary",
         "",
-        "| # | Severity | Finding | Category | CVSS |",
-        "|---|----------|---------|----------|------|",
+        "| # | Severity | Finding | Category | CVSS | Fix Effort |",
+        "|---|----------|---------|----------|------|------------|",
     ]
     for i, f in enumerate(result.sorted_findings(), 1):
         lines.append(
             f"| {i} | {f.severity.label} | {f.title} | {f.category} | "
-            f"{('%.1f' % f.cvss) if f.cvss else '-'} |"
+            f"{('%.1f' % f.cvss) if f.cvss else '-'} | {f.effort_label} |"
         )
-    lines.append("")
+    lines.append("\n---\n\n## 2. Detailed Technical Findings\n")
     for i, f in enumerate(result.sorted_findings(), 1):
         lines += [
-            f"## {i}. {f.title}",
+            f"### {i}. {f.title}",
             "",
             f"**Severity:** {f.severity.label} · **CVSS:** {f.cvss or '-'} · **{f.cwe}** · {f.owasp}",
             "",
-            f"**What we found:** {f.description}",
+            f"**Description:** {f.description}",
             "",
         ]
         if f.impact:
-            lines += [f"**Impact:** {f.impact}", ""]
+            lines += [f"**Business Impact:** {f.impact}", ""]
         if f.evidence:
             lines.append("**Evidence:**")
             lines += [f"- `{e}`" for e in f.evidence]
             lines.append("")
-        if f.remediation:
-            lines += ["**Remediation:**", "", "```", f.remediation, "```", ""]
+        lines += [
+            "**Verification PoC:**",
+            "```bash",
+            f.get_poc_curl(result.target),
+            "```",
+            "",
+            "**Remediation Patch:**",
+            "```nginx",
+            f.get_remediation_patch("nginx"),
+            "```",
+            "",
+        ]
     return "\n".join(lines)
 
 
 def write_reports(
     result: ScanResult,
     outdir: str,
-    formats: List[str] = ("html", "json", "md"),
+    formats: List[str] = ("html", "json", "md", "sarif", "csv"),
     include_proposal: bool = False,
 ) -> List[str]:
     os.makedirs(outdir, exist_ok=True)
     stamp = _dt.datetime.fromtimestamp(result.started).strftime("%Y%m%d-%H%M%S")
     base = os.path.join(outdir, f"vulnscope-{result.host.replace('.', '-')}-{stamp}")
     written: List[str] = []
+
     if "html" in formats:
         path = base + ".html"
         with open(path, "w", encoding="utf-8") as fh:
             fh.write(render_html(result, include_proposal))
         written.append(path)
+
     if "json" in formats:
         path = base + ".json"
         with open(path, "w", encoding="utf-8") as fh:
             json.dump(result.to_dict(), fh, indent=2, ensure_ascii=False)
         written.append(path)
+
     if "md" in formats:
         path = base + ".md"
         with open(path, "w", encoding="utf-8") as fh:
             fh.write(render_markdown(result))
         written.append(path)
+
+    if "sarif" in formats:
+        path = base + ".sarif"
+        with open(path, "w", encoding="utf-8") as fh:
+            json.dump(result.to_sarif(), fh, indent=2)
+        written.append(path)
+
+    if "csv" in formats:
+        path = base + ".csv"
+        with open(path, "w", encoding="utf-8") as fh:
+            fh.write(result.to_csv())
+        written.append(path)
+
+    if include_proposal or "proposal" in formats:
+        prop_path = base + "-proposal.md"
+        with open(prop_path, "w", encoding="utf-8") as fh:
+            fh.write(generate_proposal_markdown(result))
+        written.append(prop_path)
+
     return written

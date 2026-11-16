@@ -7,18 +7,40 @@ from typing import Callable, List
 from ..context import ScanContext
 from ..models import Finding
 
-from . import content, cookies, dnsemail, exposure, headers, injection, misconfig, tech, transport
+from . import (
+    api,
+    auth_access,
+    cloud,
+    content,
+    cookies,
+    dnsemail,
+    exposure,
+    headers,
+    injection,
+    misconfig,
+    secrets,
+    ssrf_traversal,
+    tech,
+    transport,
+    waf,
+)
 
 MODULES = [
     transport,
     headers,
     cookies,
+    waf,
     misconfig,
     tech,
     content,
     exposure,
+    api,
+    cloud,
+    secrets,
+    auth_access,
     dnsemail,
     injection,
+    ssrf_traversal,
 ]
 
 
