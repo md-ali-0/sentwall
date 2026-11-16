@@ -22,7 +22,7 @@ from vulnscope.checks import run_all
 from vulnscope.ci import generate_github_workflow, generate_gitlab_ci
 from vulnscope.context import Options, ScanContext
 from vulnscope.crawl import crawl
-from vulnscope.diff import compare_files
+from vulnscope.diff import compare_files, write_reports as write_diff_reports
 from vulnscope.models import ScanResult, Severity
 from vulnscope.net import Http, normalise_target
 from vulnscope.report import write_reports
@@ -211,6 +211,13 @@ def main(argv: List[str]) -> int:
         diff = compare_files(b_file, c_file)
         say(render_delta_card(diff))
         say("")
+        diff_formats = tuple(f for f in ("html", "md", "json")
+                             if f in [x.strip() for x in args.formats.split(",")])
+        if diff_formats:
+            written = write_diff_reports(diff, args.out, diff_formats)
+            for path in written:
+                say(f"  {c_slate('report')}  {c_emerald(path)}")
+            say("")
         return 0
 
     # Mode 3: Target Assessment
