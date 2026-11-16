@@ -1,14 +1,31 @@
 """Deliberately vulnerable local app used to validate VulnScope's detections.
 
 Never expose this to a network. Run:  python tests/vulnerable_app.py
+
+Pass ``--hardened`` to serve the same app with a partial remediation applied
+(headers, CORS, parameterised queries, escaping, blocked dotfiles). Scanning
+both modes gives a realistic before/after pair for ``retest.py``.
 """
 from __future__ import annotations
 
 import html
+import sys
 import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 PORT = 8099
+HARDENED = False
+
+SECURITY_HEADERS = {
+    "Content-Security-Policy": "default-src 'self'; object-src 'none'; base-uri 'self'",
+    "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+    "X-Frame-Options": "DENY",
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Permissions-Policy": "geolocation=(), camera=(), microphone=()",
+}
+
+NOT_FOUND = "<html><head><title>Not Found</title></head><body>Page not found</body></html>"
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -23,7 +40,13 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(status)
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(raw)))
-        self.send_header("Set-Cookie", "PHPSESSID=abc123def456; Path=/")
+        if HARDENED:
+            self.send_header("Set-Cookie",
+                             "PHPSESSID=abc123def456; Path=/; Secure; HttpOnly; SameSite=Lax")
+            for k, v in SECURITY_HEADERS.items():
+                self.send_header(k, v)
+        else:
+            self.send_header("Set-Cookie", "PHPSESSID=abc123def456; Path=/")
         for k, v in (extra or {}).items():
             self.send_header(k, v)
         self.end_headers()
@@ -47,18 +70,23 @@ class Handler(BaseHTTPRequestHandler):
 
         origin = self.headers.get("Origin")
         cors = {}
-        if origin:
+        if origin and not HARDENED:
             cors["Access-Control-Allow-Origin"] = origin
             cors["Access-Control-Allow-Credentials"] = "true"
 
+        if path in ("/.env", "/.git/config", "/backup.sql") and HARDENED:
+            self._send(NOT_FOUND, 404)
+            return
+
         if path == "/":
             q = qs.get("q", [""])[0]
-            # reflected XSS: no encoding
+            # reflected XSS: no encoding (fixed in hardened mode)
+            shown = html.escape(q) if HARDENED else q
             body = f"""<html><head><title>Vuln Test Shop</title>
 <meta name="generator" content="WordPress 5.2">
 </head><body>
 <h1>Search</h1>
-<p>Results for: {q}</p>
+<p>Results for: {shown}</p>
 <form action="/search" method="get"><input name="q"><button>Go</button></form>
 <form action="/login" method="post"><input name="user"><input type="password" name="pass"><button>Login</button></form>
 <a href="https://example.com" target="_blank">partner</a>
@@ -77,11 +105,13 @@ class Handler(BaseHTTPRequestHandler):
 
         if path == "/search":
             q = qs.get("q", [""])[0]
-            if "'" in q:
+            if not HARDENED and "'" in q:
                 self._send("<html><body>You have an error in your SQL syntax; check the manual "
                            "that corresponds to your MySQL server version near '" + q + "'</body></html>")
                 return
-            self._send(f"<html><body>You searched for {q}</body></html>")
+            shown = html.escape(q) if HARDENED else q
+            self._send(f"<html><body>You searched for {shown}</body></html>")
+            return
 
         if path == "/redirect":
             target = qs.get("url", ["/"])[0]
@@ -94,6 +124,9 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/download":
             f = qs.get("file", [""])[0]
             if "etc/passwd" in f:
+                if HARDENED:
+                    self._send("file not found", 404)
+                    return
                 self._send("root:x:0:0:root:/root:/bin/bash\ndaemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin\n",
                            ctype="text/plain")
                 return
@@ -101,6 +134,9 @@ class Handler(BaseHTTPRequestHandler):
 
         if path == "/render":
             name = qs.get("name", [""])[0]
+            if HARDENED:
+                self._send(f"<html><body>Hello {html.escape(name)}</body></html>")
+                return
             import re as _re
             # naive template evaluation -> classic SSTI
             name = _re.sub(r"\{\{\s*(\d+)\s*\*\s*(\d+)\s*\}\}",
@@ -159,11 +195,22 @@ class Handler(BaseHTTPRequestHandler):
         self._send("<html><body>ok</body></html>")
 
     def do_TRACE(self):
+        if HARDENED:
+            self.send_response(405)
+            self.send_header("Allow", "GET, POST, OPTIONS")
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
         self._send(f"TRACE {self.path} HTTP/1.1\r\nHost: {self.headers.get('Host')}\r\n",
                    ctype="message/http")
 
     def do_OPTIONS(self):
         self.send_response(200)
+        if HARDENED:
+            self.send_header("Allow", "GET, POST, OPTIONS")
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
         self.send_header("Allow", "GET, POST, OPTIONS, TRACE, PUT")
         self.send_header("Access-Control-Allow-Origin", self.headers.get("Origin") or "*")
         self.send_header("Access-Control-Allow-Credentials", "true")
@@ -172,5 +219,10 @@ class Handler(BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    print(f"vulnerable test app on http://127.0.0.1:{PORT}")
+    HARDENED = "--hardened" in sys.argv
+    if HARDENED:
+        Handler.server_version = "nginx/1.24.0"
+        print(f"hardened test app on http://127.0.0.1:{PORT}")
+    else:
+        print(f"vulnerable test app on http://127.0.0.1:{PORT}")
     ThreadingHTTPServer(("127.0.0.1", PORT), Handler).serve_forever()

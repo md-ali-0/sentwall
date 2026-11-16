@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import time
-from typing import Callable, List
+from typing import Callable, List, Optional
 
 from ..context import ScanContext
 from ..models import Finding
@@ -44,12 +44,21 @@ MODULES = [
 ]
 
 
-def run_all(ctx: ScanContext, progress: Callable[[str], None] = lambda m: None) -> List[Finding]:
+def run_all(
+    ctx: ScanContext,
+    progress: Callable[[str], None] = lambda m: None,
+    on_module_start: Optional[Callable[[int, int, str], None]] = None,
+    on_module_done: Optional[Callable[[int, int, str, List[Finding], float], None]] = None,
+) -> List[Finding]:
     findings: List[Finding] = []
     total = len(MODULES)
     for i, module in enumerate(MODULES, 1):
         label = getattr(module, "LABEL", module.NAME)
-        progress(f"[{i}/{total}] {label}")
+        if on_module_start:
+            on_module_start(i, total, label)
+        else:
+            progress(f"[{i}/{total}] {label}")
+
         started = time.time()
         try:
             result = module.run(ctx) or []
@@ -58,5 +67,9 @@ def run_all(ctx: ScanContext, progress: Callable[[str], None] = lambda m: None) 
             result = []
         took = time.time() - started
         findings.extend(result)
-        progress(f"    -> {len(result)} finding(s) in {took:.1f}s")
+
+        if on_module_done:
+            on_module_done(i, total, label, result, took)
+        else:
+            progress(f"    -> {len(result)} finding(s) in {took:.1f}s")
     return findings

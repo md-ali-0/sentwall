@@ -26,6 +26,27 @@ from vulnscope.diff import compare_files
 from vulnscope.models import ScanResult, Severity
 from vulnscope.net import Http, normalise_target
 from vulnscope.report import write_reports
+from vulnscope.ui import (
+    bold,
+    c_cyan,
+    c_dark,
+    c_emerald,
+    c_green,
+    c_orange,
+    c_red,
+    c_slate,
+    c_white,
+    c_yellow,
+    format_module_result,
+    render_artifacts_tree,
+    render_banner,
+    render_delta_card,
+    render_findings_table,
+    render_legal_prompt,
+    render_summary_dashboard,
+    render_target_card,
+    render_top_poc_spotlight,
+)
 
 # ---------------------------------------------------------------------------
 BANNER = r"""
@@ -60,14 +81,11 @@ def say(msg: str = "") -> None:
 
 def confirm_authorization(target: str) -> bool:
     say("")
-    say(c("  Legal notice", "1;33"))
-    say(f"  You are about to run active security tests against: {c(target, '1;37')}")
-    say("  Unauthorised scanning is illegal in most jurisdictions (Computer Misuse Act,")
-    say("  CFAA, ICT Act 2006 s.57 in Bangladesh, and equivalents elsewhere).")
-    say("  Only continue if you own the system or hold written permission to test it.")
+    say(render_legal_prompt(target))
     say("")
     try:
-        answer = input("  Type 'yes' to confirm you have authorisation: ").strip().lower()
+        prompt_text = f"  {c_emerald('➤')} {bold(c_white('Do you hold valid written authorization to assess this target? [y/N]:'))} "
+        answer = input(prompt_text).strip().lower()
     except (EOFError, KeyboardInterrupt):
         return False
     return answer in ("yes", "y")
@@ -165,10 +183,7 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
 def main(argv: List[str]) -> int:
     args = parse_args(argv)
 
-    if USE_COLOR:
-        say(c(BANNER.format(ver=__version__), "36"))
-    else:
-        say(BANNER.format(ver=__version__))
+    say(render_banner(__version__))
 
     # Mode 1: CI/CD Workflow Generation
     if args.generate_ci:
@@ -178,46 +193,40 @@ def main(argv: List[str]) -> int:
             os.makedirs(".github/workflows", exist_ok=True)
             with open(out_file, "w", encoding="utf-8") as fh:
                 fh.write(content)
-            say(c(f"  [+] Generated GitHub Actions security workflow in: {out_file}", "1;32"))
+            say(c_green(f"  ✔ Generated GitHub Actions security workflow in: {out_file}\n"))
         elif args.generate_ci == "gitlab":
             content = generate_gitlab_ci()
             out_file = ".gitlab-ci.yml"
             with open(out_file, "w", encoding="utf-8") as fh:
                 fh.write(content)
-            say(c(f"  [+] Generated GitLab CI security configuration in: {out_file}", "1;32"))
+            say(c_green(f"  ✔ Generated GitLab CI security configuration in: {out_file}\n"))
         return 0
 
     # Mode 2: Delta Comparison
     if args.diff:
         b_file, c_file = args.diff
         if not os.path.exists(b_file) or not os.path.exists(c_file):
-            say(c("  ! Both baseline and current scan files must exist.", "1;31"))
+            say(c_red("  ! Error: Both baseline and current scan JSON files must exist."))
             return 2
         diff = compare_files(b_file, c_file)
-        say(c(f"\n  ── Delta Remediation Report: {diff.target} ──", "1;37"))
-        say(f"  Baseline Score: {diff.baseline_score}/100 (Grade {diff.baseline_grade})")
-        say(f"  Current Score : {diff.current_score}/100 (Grade {diff.current_grade})")
-        say(f"  Risk Delta    : {c(f'{diff.score_change:+d} points', '1;32' if diff.score_change < 0 else '1;31')}")
-        say(f"  Resolved Bugs : {c(str(len(diff.resolved)), '1;32')} fixed")
-        say(f"  Persistent    : {len(diff.persistent)} open")
-        say(f"  New Bugs      : {c(str(len(diff.new_findings)), '1;31') if diff.new_findings else '0'}")
-        say(f"  Verdict       : {diff.verdict}\n")
+        say(render_delta_card(diff))
+        say("")
         return 0
 
     # Mode 3: Target Assessment
     if not args.target:
-        say(c("  ! Error: Please specify a target URL to assess.", "1;31"))
-        say("    Usage: python scan.py https://target.com --authorized")
+        say(c_red("  ! Error: Please specify a target URL to assess."))
+        say("    Usage: python scan.py https://target.com --authorized\n")
         return 2
 
     base_url, host = normalise_target(args.target)
     if not host:
-        say(c("  ! could not parse a hostname from the target", "1;31"))
+        say(c_red("  ! Error: Could not parse a valid hostname from target coordinate.\n"))
         return 2
 
     if not args.authorized:
         if not confirm_authorization(base_url):
-            say(c("  Aborted: authorisation not confirmed.", "1;31"))
+            say(c_red("  Aborted: Legal authorisation not confirmed.\n"))
             return 1
 
     headers = {}
@@ -258,31 +267,32 @@ def main(argv: List[str]) -> int:
     ctx = ScanContext(base_url, base_url, host, http, options, logger=log)
 
     try:
-        log(c(f"\n  Target   {base_url}", "1;37"))
-        log(c(f"  Profile  {args.profile.upper()}"
-              f"{' + deep blind checks' if is_deep else ''}"
-              f"{' + subdomains' if options.subdomains else ''}"
-              f"{' + form canary testing' if options.test_forms else ''}\n", "0;37"))
-
-        log(c("[1] Resolving and crawling attack surface", "1;36"))
         ips = ctx.ips()
-        log(f"  IP: {', '.join(ips) if ips else 'unresolved'}")
         if not ips:
-            log(c("  ! host does not resolve - is the domain spelled correctly?", "1;31"))
+            say(c_red("  ! Error: Target host does not resolve. Is the domain spelled correctly?\n"))
             return 2
 
-        ctx.pages = crawl(http, base_url, max_pages=options.max_pages, depth=options.depth, log=log)
+        if not args.quiet:
+            say(render_target_card(base_url, ips, args.profile, is_deep, options.subdomains, options.test_forms, options.threads))
+            say("")
+
+        log(f"  {bold(c_cyan('[1/3]'))} {bold(c_white('Attack Surface Discovery & Crawling Engine'))}")
+        ctx.pages = crawl(http, base_url, max_pages=options.max_pages, depth=options.depth, log=lambda m: log("      " + c_dark("• ") + c_slate(m)))
         if not ctx.pages:
-            log(c("  ! no pages could be retrieved", "1;31"))
+            log(c_red("  ! Error: No pages could be retrieved from target.\n"))
             return 2
         result.pages_scanned = [p.url for p in ctx.pages]
-        log(f"  crawled {len(ctx.pages)} page(s)\n")
+        log(f"      {c_emerald('✔')} Discovered {bold(c_white(str(len(ctx.pages))))} accessible endpoint(s)\n")
 
-        log(c("[2] Running 15 security check modules", "1;36"))
-        result.findings = run_all(ctx, progress=lambda m: log("  " + m))
+        log(f"  {bold(c_cyan('[2/3]'))} {bold(c_white('Executing 15 Automated Security Vector Audits'))}")
+        result.findings = run_all(
+            ctx,
+            progress=lambda m: log("  " + m),
+            on_module_done=lambda i, tot, lbl, res, took: log(format_module_result(i, tot, lbl, res, took)),
+        )
         result.metadata = ctx.meta
     except KeyboardInterrupt:
-        say(c("\n  Interrupted - writing partial report...", "1;33"))
+        say(c_yellow("\n  Interrupted by operator — generating partial assessment report..."))
     finally:
         result.finished = time.time()
         result.requests_made = http.count
@@ -291,28 +301,20 @@ def main(argv: List[str]) -> int:
     if not result.findings:
         result.finished = result.finished or time.time()
 
-    # ---------------------------------------------------------------- summary
-    counts = result.counts()
+    # ---------------------------------------------------------------- summary & dashboard
     say("")
-    say(c("  ── Summary " + "─" * 46, "0;37"))
-    for sev in (Severity.CRITICAL, Severity.HIGH, Severity.MEDIUM, Severity.LOW, Severity.INFO):
-        n = counts[sev.value]
-        label = c(f"{sev.label:9}", SEV_STYLE[sev])
-        say(f"  {label} {n}")
+    say(f"  {bold(c_cyan('[3/3]'))} {bold(c_white('Audit Complete — Generating Executive Posture Intelligence'))}\n")
+    say(render_summary_dashboard(result))
     say("")
-    score = result.risk_score()
-    fin = result.financial_risk()
-    say(f"  Risk score : {c(str(score) + '/100', '1;37')}   Grade: {c(result.grade(), '1;37')}")
-    say(f"  Verdict    : {result.grade_verdict()}")
-    say(f"  Breach Risk: {fin['breach_probability_pct']}% likelihood (${fin['estimated_financial_loss_usd']:,} exposure)")
-    say(f"  Requests   : {result.requests_made}   Duration: {result.duration:.1f}s")
+    say(render_findings_table(result.sorted_findings()))
 
-    top = [f for f in result.sorted_findings() if f.severity.rank >= 4][:5]
-    if top:
-        say("")
-        say(c("  Top issues", "1;37"))
-        for f in top:
-            say(f"   {c(f.severity.value.upper(), SEV_STYLE[f.severity]):<10} {f.title}")
+    # Spotlight #1 critical/high finding with instant PoC
+    top_crit = next((f for f in result.sorted_findings() if f.severity in (Severity.CRITICAL, Severity.HIGH)), None)
+    if top_crit:
+        spot = render_top_poc_spotlight(top_crit, base_url)
+        if spot:
+            say("")
+            say(spot)
 
     # ---------------------------------------------------------------- reports
     formats = [x.strip() for x in args.formats.split(",") if x.strip()]
@@ -324,18 +326,10 @@ def main(argv: List[str]) -> int:
             if export_pdf(html, pdf):
                 paths.append(pdf)
             else:
-                say(c("  ! no Chrome/Edge found for PDF export - use Print → Save as PDF", "1;33"))
+                say(c_yellow("  ! Note: Headless Chrome/Edge not detected for automated PDF export."))
     say("")
-    say(c("  Generated Reports & Artifacts", "1;37"))
-    for p in paths:
-        say(f"   {p}")
+    say(render_artifacts_tree(paths))
     say("")
-    html_report = next((p for p in paths if p.endswith(".html")), "")
-    if html_report:
-        abs_html = os.path.abspath(html_report).replace(os.sep, "/")
-        say(c(f"  Open report in your browser to inspect interactive dashboard:\n  file:///{abs_html}\n", "0;37"))
-    else:
-        say("")
     return 0
 
 
