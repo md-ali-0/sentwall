@@ -1,0 +1,137 @@
+{
+  "domain": "example.com",
+  "started": "2026-11-16T13:42:53.786716",
+  "elapsed_seconds": 46.2,
+  "sources": {
+    "certificate transparency": 6,
+    "dns brute force": 1
+  },
+  "discovered_count": 7,
+  "hosts": [
+    {
+      "host": "example.com",
+      "ips": [
+        "172.66.147.243",
+        "104.20.23.154"
+      ],
+      "scheme": "https",
+      "status": 200,
+      "server": "cloudflare",
+      "title": "Example Domain",
+      "tech": [
+        "Cloudflare"
+      ],
+      "tls_trusted": true,
+      "tls_days": 39,
+      "findings": 13,
+      "critical": 0,
+      "high": 0,
+      "risk_score": 43,
+      "grade": "C"
+    },
+    {
+      "host": "m.testexample.com",
+      "ips": [
+        "13.248.169.48",
+        "76.223.54.146"
+      ],
+      "scheme": "http",
+      "status": 200,
+      "server": "",
+      "title": "",
+      "tech": [],
+      "tls_trusted": null,
+      "tls_days": null,
+      "findings": 15,
+      "critical": 0,
+      "high": 2,
+      "risk_score": 62,
+      "grade": "D"
+    },
+    {
+      "host": "www.example.com",
+      "ips": [
+        "104.20.23.154",
+        "172.66.147.243"
+      ],
+      "scheme": "https",
+      "status": 200,
+      "server": "cloudflare",
+      "title": "Example Domain",
+      "tech": [
+        "Cloudflare"
+      ],
+      "tls_trusted": true,
+      "tls_days": 39,
+      "findings": 13,
+      "critical": 0,
+      "high": 0,
+      "risk_score": 43,
+      "grade": "C"
+    },
+    {
+      "host": "dev.example.com",
+      "ips": [],
+      "scheme": "",
+      "status": 0,
+      "server": "",
+      "title": "",
+      "tech": [],
+      "tls_trusted": null,
+      "tls_days": null,
+      "findings": 0,
+      "critical": 0,
+      "high": 0,
+      "risk_score": null,
+      "grade": ""
+    },
+    {
+      "host": "m.example.com",
+      "ips": [],
+      "scheme": "",
+      "status": 0,
+      "server": "",
+      "title": "",
+      "tech": [],
+      "tls_trusted": null,
+      "tls_days": null,
+      "findings": 0,
+      "critical": 0,
+      "high": 0,
+      "risk_score": null,
+      "grade": ""
+    },
+    {
+      "host": "products.example.com",
+      "ips": [],
+      "scheme": "",
+      "status": 0,
+      "server": "",
+      "title": "",
+      "tech": [],
+      "tls_trusted": null,
+      "tls_days": null,
+      "findings": 0,
+      "critical": 0,
+      "high": 0,
+      "risk_score": null,
+      "grade": ""
+    },
+    {
+      "host": "support.example.com",
+      "ips": [],
+      "scheme": "",
+      "status": 0,
+      "server": "",
+      "title": "",
+      "tech": [],
+      "tls_trusted": null,
+      "tls_days": null,
+      "findings": 0,
+      "critical": 0,
+      "high": 0,
+      "risk_score": null,
+      "grade": ""
+    }
+  ]
+}

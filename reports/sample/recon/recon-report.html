@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Attack surface — example.com</title>
+<style>
+:root{
+  --ink:#0f172a; --body:#334155; --muted:#64748b; --line:#e2e8f0;
+  --bg:#f8fafc; --card:#ffffff; --accent:#10b981;
+  --critical:#ef4444; --high:#f97316; --medium:#f59e0b; --low:#3b82f6; --info:#64748b;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--body);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  font-size:13.5px; line-height:1.6; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1050px; margin:0 auto; padding:30px 20px 70px}
+h1,h2,h3,h4{color:var(--ink); margin:0; line-height:1.3; font-weight:700; letter-spacing:-.01em}
+p{margin:0 0 12px}
+code{font-family:"SFMono-Regular",Consolas,Menlo,monospace; background:#f1f5f9;
+  padding:1px 5px; border-radius:4px; font-size:11.5px; color:#334155}
+.top-toolbar{display:flex; justify-content:space-between; align-items:center; margin-bottom:16px}
+.brand{font-size:16px; font-weight:800; color:var(--ink); display:flex; align-items:center; gap:8px}
+.brand .dot{width:9px; height:9px; background:var(--accent); border-radius:50%}
+.actions-bar{display:flex; gap:10px; align-items:center}
+.btn{background:var(--card); color:var(--ink); border:1px solid var(--line);
+  padding:6px 14px; border-radius:6px; font-size:12px; font-weight:600; cursor:pointer;
+  transition:border-color .15s ease,color .15s ease}
+.btn:hover{border-color:var(--accent); color:var(--accent)}
+.btn-primary{background:var(--accent); color:#042f24; font-weight:700; border-color:var(--accent)}
+.sec-head{display:flex; align-items:baseline; gap:10px; margin:28px 0 10px;
+  padding-bottom:8px; border-bottom:1px solid var(--line)}
+.sec-head h2{font-size:15px; letter-spacing:-.01em}
+.chip{display:inline-block; padding:1px 8px; border-radius:4px; font-size:10.5px;
+  font-weight:700; letter-spacing:.02em; text-transform:uppercase}
+.chip.critical{background:rgba(239,68,68,.12); color:#b91c1c}
+.chip.high{background:rgba(249,115,22,.14); color:#9a3412}
+.chip.medium{background:rgba(245,158,11,.16); color:#92400e}
+.chip.low{background:rgba(59,130,246,.12); color:#1d4ed8}
+.chip.info{background:rgba(100,116,139,.12); color:#475569}
+@media print{ .top-toolbar{display:none} }
+
+.rc-head{padding:24px 0 18px;border-bottom:1px solid var(--line);margin-bottom:22px}
+.rc-kicker{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:10px}
+.rc-head h1{font-size:29px;letter-spacing:-0.02em;margin-bottom:6px}
+.rc-sub{font-size:12.5px;color:var(--muted);font-family:"SFMono-Regular",Consolas,monospace}
+.rc-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:12px;margin:20px 0 26px}
+.rc-stat{background:var(--card);border:1px solid var(--line);border-left-width:4px;
+  border-radius:10px;padding:15px 17px}
+.rc-stat .n{font-size:26px;font-weight:800;line-height:1.1;color:var(--ink)}
+.rc-stat .l{font-size:11px;font-weight:600;color:var(--muted);margin-top:2px}
+.rc-stat.total{border-left-color:#64748b}
+.rc-stat.live{border-left-color:#10b981}
+.rc-stat.risk{border-left-color:#ef4444}
+.rc-stat.expiring{border-left-color:#f59e0b}
+.rc-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:10px}
+.rc-table th{text-align:left;font-size:10.5px;font-weight:700;letter-spacing:.07em;
+  text-transform:uppercase;color:var(--muted);padding:9px 10px;border-bottom:1px solid var(--line)}
+.rc-table td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+.rc-table tr:last-child td{border-bottom:none}
+.rc-host{font-family:"SFMono-Regular",Consolas,monospace;font-weight:600;color:var(--ink);font-size:12px}
+.rc-mono{font-family:"SFMono-Regular",Consolas,monospace;color:var(--muted);font-size:11.5px}
+.rc-title{color:var(--body);font-size:11.5px;max-width:240px;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap;display:block}
+.rc-pill{display:inline-block;padding:1px 7px;border-radius:4px;font-size:10.5px;font-weight:700}
+.rc-pill.ok{background:rgba(16,185,129,.12);color:#047857}
+.rc-pill.warn{background:rgba(245,158,11,.14);color:#92400e}
+.rc-pill.bad{background:rgba(239,68,68,.12);color:#b91c1c}
+.rc-pill.mute{background:rgba(100,116,139,.12);color:#475569}
+.rc-dead{color:var(--muted)}
+.rc-legend{font-size:11.5px;color:var(--muted);margin-top:14px}
+.rc-foot{margin-top:36px;padding-top:16px;border-top:1px solid var(--line);font-size:11.5px;color:var(--muted)}
+@media print{.top-toolbar{display:none} .rc-table tr{break-inside:avoid}}
+</style></head>
+<body><div class="wrap">
+
+<div class="top-toolbar">
+  <div class="brand"><span class="dot"></span>VulnScope Recon</div>
+  <div class="actions-bar"><button class="btn btn-primary" onclick="window.print()">Print / PDF</button></div>
+</div>
+
+<header class="rc-head">
+  <div class="rc-kicker">External attack surface</div>
+  <h1>example.com</h1>
+  <div class="rc-sub">7 names discovered · 3 responding hosts</div>
+</header>
+
+<div class="rc-stats">
+  <div class="rc-stat total"><div class="n">7</div><div class="l">Names found</div></div>
+  <div class="rc-stat live"><div class="n">3</div><div class="l">Live hosts</div></div>
+  <div class="rc-stat risk"><div class="n">1</div><div class="l">With crit / high</div></div>
+  <div class="rc-stat expiring"><div class="n">0</div><div class="l">Cert &lt; 30 days</div></div>
+</div>
+
+<section>
+  <div class="sec-head"><h2>Live hosts</h2></div>
+  <table class="rc-table">
+    <thead><tr><th>Host</th><th>IP</th><th>Status</th><th>Server</th>
+    <th>Title / stack</th><th>TLS</th><th>Findings</th></tr></thead>
+    <tbody><tr>
+  <td class="rc-host">example.com</td>
+  <td class="rc-mono">172.66.147.243</td>
+  <td class="rc-mono">200 https</td>
+  <td class="rc-mono">cloudflare</td>
+  <td><span class="rc-title" title="Example Domain">Example Domain</span>
+      <span class="rc-mono">Cloudflare</span></td>
+  <td><span class="rc-mono">39d</span></td>
+  <td><span class="rc-pill mute">13 finding(s)</span></td>
+</tr><tr>
+  <td class="rc-host">m.testexample.com</td>
+  <td class="rc-mono">13.248.169.48</td>
+  <td class="rc-mono">200 http</td>
+  <td class="rc-mono">—</td>
+  <td><span class="rc-title" title="">—</span>
+      <span class="rc-mono">—</span></td>
+  <td><span class="rc-mono">—</span></td>
+  <td><span class="rc-pill warn">2 high</span></td>
+</tr><tr>
+  <td class="rc-host">www.example.com</td>
+  <td class="rc-mono">104.20.23.154</td>
+  <td class="rc-mono">200 https</td>
+  <td class="rc-mono">cloudflare</td>
+  <td><span class="rc-title" title="Example Domain">Example Domain</span>
+      <span class="rc-mono">Cloudflare</span></td>
+  <td><span class="rc-mono">39d</span></td>
+  <td><span class="rc-pill mute">13 finding(s)</span></td>
+</tr></tbody>
+  </table>
+  <p class="rc-legend">Findings columns are only populated when the run used <code>--scan</code>.
+  Every host listed here answered on HTTP or HTTPS; names that did not resolve are listed below.</p>
+</section>
+
+
+<section>
+  <div class="sec-head"><h2>Names with no response (4)</h2></div>
+  <p style="font-size:12px;color:var(--muted);line-height:1.9"><code>dev.example.com</code> <code>m.example.com</code> <code>products.example.com</code> <code>support.example.com</code> </p>
+</section>
+
+<section>
+  <div class="sec-head"><h2>How this was built</h2></div>
+  <ul style="font-size:12.5px;color:var(--body)"><li>certificate transparency: <b>6</b> name(s)</li><li>dns brute force: <b>1</b> name(s)</li>
+    <li>Each name was then resolved and requested over HTTPS, falling back to HTTP.</li>
+  </ul>
+</section>
+
+<div class="rc-foot">
+  Generated 16 November 2026, 13:42 in
+  46.2s · passive discovery plus light active probing only ·
+  no exploitation was attempted at this stage.
+</div>
+
+</div></body></html>
