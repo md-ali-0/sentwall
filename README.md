@@ -49,15 +49,52 @@ python scan.py client-site.com --authorized --profile deep
 python scan.py https://api.client.com --authorized --profile api
 ```
 
-### ৩.২. ক্লায়েন্টকে কাজ প্রমাণের জন্য (Delta Re-Scan Comparison)
-কাজ করার আগে প্রথম স্ক্যানটি রাখুন এবং ফিক্স করার পর দ্বিতীয় স্ক্যানটি চালিয়ে তুলনা করুন:
+### ৩.২. ক্লায়েন্টকে কাজ প্রমাণের জন্য (Retest / Delta Report)
+কাজ করার আগে প্রথম স্ক্যানটি রাখুন, ফিক্স করার পর দ্বিতীয় স্ক্যানটি চালান — তারপর তুলনা:
+
 ```bash
-python scan.py --diff reports/target/2026-11-16_10-00-00/report.json reports/target/2026-11-16_12-00-00/report.json
+# তুলনা + রিপোর্ট (HTML / Markdown / JSON)
+python retest.py reports/target/2026-11-16_10-00-00/report.json \
+                 reports/target/2026-11-16_12-00-00/report.json
+
+# অথবা একই কাজ scan.py দিয়েও
+python scan.py --diff baseline.json retest.json --out reports
 ```
-এটি সাথে সাথে ক্লায়েন্টের জন্য রিপোর্ট দিবে:
-- কতটি সমস্যা সমাধান (Resolved) হয়েছে
-- রিস্ক স্কোর কতটা কমেছে (যেমন: ৮৫ থেকে নেমে ১২ হয়েছে)
-- সিকিউরিটি গ্রেড F থেকে B বা A হয়েছে
+
+রিপোর্টে পাঁচটা ভাগ থাকে:
+
+| ভাগ | মানে |
+|---|---|
+| **Resolved** | আগে ছিল, এখন নেই — ক্লায়েন্ট সত্যিই ঠিক করেছে |
+| **Still open** | আগেও ছিল, এখনো আছে — পরের রাউন্ডের কাজ |
+| **Regressed** | আছে, আর সিভিয়ারিটি **বেড়েছে** — ফিক্সের সময় নতুন সমস্যা |
+| **Improved** | সিভিয়ারিটি কমেছে, কিন্তু পুরো ঠিক হয়নি |
+| **New** | শুধু দ্বিতীয় স্ক্যানে এসেছে — রিগ্রেশন |
+
+সাথে থাকে: স্কোর ও গ্রেডের তুলনা (F → E), সিভিয়ারিটি-ভিত্তিক আগে/পরে টেবিল, আর fix rate।
+
+**CI গেট হিসেবে:**
+
+```bash
+# critical বা high কিছু খোলা থাকলে exit code 1
+python retest.py old.json new.json --fail-on high
+```
+
+**ডেমো দেখতে** (দুর্বল অ্যাপ → হার্ডেন্ড অ্যাপ, আসল re-scan):
+
+```bash
+python tests/vulnerable_app.py                 # টার্মিনাল ১
+python scan.py http://127.0.0.1:8099 --authorized --formats json --out reports/before
+
+# টার্মিনাল ১ বন্ধ করে আবার চালান:
+python tests/vulnerable_app.py --hardened
+python scan.py http://127.0.0.1:8099 --authorized --formats json --out reports/after
+
+python retest.py reports/before/*/*/report.json reports/after/*/*/report.json
+```
+
+ফলাফল: **৩৭ → ১৬ ফাইন্ডিং, ৮টা critical → ০, স্কোর ১০০ → ৭১, গ্রেড F → E।**
+আর একটা **নতুন** ফাইন্ডিং (`csp-no-frame-ancestors`) ধরা পড়ে — কারণ আধা-সমাধানে CSP যোগ করা হয়েছিল কিন্তু `frame-ancestors` বাদ পড়েছিল। এটাই রিটেস্টের আসল মূল্য: ফিক্স নিজেই নতুন সমস্যা আনে কিনা সেটা ধরা পড়ে।
 
 ### ৩.৩. CI/CD পাইপলাইন তৈরি করতে
 ```bash
@@ -99,6 +136,10 @@ python scan.py --generate-ci gitlab
 - `report.csv` — এক্সেল বা স্প্রেডশীটে অ্যানালাইসিসের জন্য ডেটা।
 - `report.json` — সম্পূর্ণ র ডেটা।
 - `proposal.md` — ক্লায়েন্টের সইয়ের জন্য রেডি বাণিজ্যিক প্রস্তাব ও কাজের চুক্তিপত্র (Statement of Work)।
+
+রিটেস্ট চালালে আলাদা করে `reports/retest-<host>-<timestamp>.html / .md / .json` তৈরি হয় —
+এটাই সেই ডকুমেন্ট যেটা ক্লায়েন্টকে দেখিয়ে বলবে "দেখুন, ২২টা সমস্যা ঠিক হয়েছে, এই ৩টা এখনো বাকি"।
+`reports/sample/retest/` ফোল্ডারে একটা সম্পূর্ণ উদাহরণ আছে (`retest-report.html`)।
 
 ---
 

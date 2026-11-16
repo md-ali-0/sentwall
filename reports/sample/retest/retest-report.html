@@ -1,0 +1,622 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Retest — 127.0.0.1:8099</title>
+<style>
+:root{
+  --ink:#0f172a; --body:#334155; --muted:#64748b; --line:#e2e8f0;
+  --bg:#f8fafc; --card:#ffffff; --accent:#10b981; --accent-soft:rgba(16, 185, 129, 0.1);
+  --critical:#ef4444; --high:#f97316; --medium:#f59e0b; --low:#3b82f6; --info:#64748b;
+  --code-bg:#0f172a; --code-text:#e2e8f0;
+}
+[data-theme="dark"]{
+  --ink:#f8fafc; --body:#cbd5e1; --muted:#94a3b8; --line:#1f293d;
+  --bg:#090d16; --card:#111827; --accent:#10b981; --accent-soft:rgba(16, 185, 129, 0.12);
+  --critical:#ef4444; --high:#f97316; --medium:#f59e0b; --low:#3b82f6; --info:#64748b;
+  --code-bg:#080c14; --code-text:#38bdf8;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--body);
+  font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", sans-serif;
+  font-size:13.5px; line-height:1.6; -webkit-font-smoothing:antialiased;
+  transition:background .2s ease, color .2s ease;
+}
+.wrap{max-width:1050px; margin:0 auto; padding:32px 20px 80px}
+h1,h2,h3,h4{color:var(--ink); margin:0; line-height:1.3; font-weight:700; letter-spacing:-0.01em}
+p{margin:0 0 12px}
+a{color:var(--accent); text-decoration:none}
+code,pre{font-family:"SFMono-Regular", Consolas, Menlo, monospace}
+pre{
+  background:var(--code-bg); color:var(--code-text); padding:14px 16px; border-radius:6px;
+  font-size:12px; line-height:1.55; overflow-x:auto; white-space:pre-wrap;
+  word-break:break-word; margin:8px 0 0; border:1px solid var(--line);
+}
+pre.fix{background:var(--card); color:var(--ink); border:1px solid var(--line)}
+
+/* ---------- top nav & controls ---------- */
+.top-toolbar{display:flex; justify-content:space-between; align-items:center; margin-bottom:18px}
+.brand{font-size:17px; font-weight:800; color:var(--ink); display:flex; align-items:center; gap:8px}
+.brand .dot{width:9px; height:9px; background:var(--accent); border-radius:50%; box-shadow:0 0 10px var(--accent)}
+.actions-bar{display:flex; gap:10px; align-items:center}
+.btn{
+  background:var(--card); color:var(--ink); border:1px solid var(--line);
+  padding:6px 14px; border-radius:6px; font-size:12px; font-weight:600; cursor:pointer;
+  transition:all .15s ease;
+}
+.btn:hover{border-color:var(--accent); color:var(--accent)}
+.btn-primary{background:var(--accent); color:#042f24; font-weight:700; border-color:var(--accent)}
+.btn-primary:hover{opacity:.9; color:#fff}
+
+/* ---------- cover ---------- */
+.cover{
+  background:linear-gradient(140deg,#0d1527 0%,#111c34 55%,#064e3b 160%);
+  color:#e8eef6; border-radius:10px; padding:40px 36px; margin-bottom:28px;
+  border:1px solid var(--line); position:relative; overflow:hidden;
+}
+.cover:after{
+  content:""; position:absolute; right:-90px; top:-90px; width:320px; height:320px;
+  background:radial-gradient(circle,rgba(16,185,129,.2),transparent 68%); border-radius:50%;
+}
+.cover .kicker{
+  font-size:11px; letter-spacing:.15em; text-transform:uppercase;
+  color:var(--accent); font-weight:700; margin-bottom:12px;
+}
+.cover h1{color:#fff; font-size:30px; letter-spacing:-0.02em; margin-bottom:6px}
+.cover .target{font-size:14px; color:#94a3b8; word-break:break-all}
+.cover .grid{display:flex; flex-wrap:wrap; gap:24px 30px; margin-top:24px; position:relative; z-index:2}
+.cover .grid div{min-width:92px}
+.cover .grid dt{font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:#7f97ab; margin-bottom:3px}
+.cover .grid dd{margin:0; font-size:13.5px; color:#e8eef6; font-weight:600}
+.grade-badge{
+  position:absolute; right:36px; bottom:34px; text-align:center; z-index:2;
+}
+.grade-badge .g{
+  font-size:58px; font-weight:900; line-height:1; color:var(--accent);
+}
+.grade-badge .l{font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:#9fb4c6}
+
+/* ---------- sections ---------- */
+section{margin-bottom:32px}
+.sec-head{display:flex; align-items:baseline; gap:12px; margin-bottom:14px;
+  border-bottom:2px solid var(--line); padding-bottom:8px}
+.sec-head h2{font-size:18px; font-weight:700}
+.sec-head .num{font-size:11px; font-weight:700; color:var(--accent); letter-spacing:.08em}
+.card{
+  background:var(--card); border:1px solid var(--line); border-radius:8px; padding:20px 22px;
+}
+.card + .card{margin-top:14px}
+
+/* ---------- score row ---------- */
+.score-row{display:flex; gap:20px; flex-wrap:wrap; align-items:stretch}
+.gauge-box{flex:0 0 210px; display:flex; flex-direction:column; align-items:center;
+  justify-content:center; padding:18px}
+.gauge{width:150px; height:150px; border-radius:50%; display:grid; place-items:center; position:relative}
+.gauge .inner{
+  width:112px; height:112px; background:var(--card); border-radius:50%;
+  display:grid; place-items:center; text-align:center;
+}
+.gauge .val{font-size:34px; font-weight:750; color:var(--ink); line-height:1}
+.gauge .lbl{font-size:9px; letter-spacing:.16em; text-transform:uppercase; color:var(--muted); margin-top:4px}
+.stat-grid{flex:1; display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:10px}
+.stat{background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px 16px}
+.stat .n{font-size:26px; font-weight:750; line-height:1.1}
+.stat .t{font-size:11px; color:var(--muted); letter-spacing:.06em; text-transform:uppercase; margin-top:2px}
+
+/* ---------- financial risk card ---------- */
+.fin-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:14px; margin-top:14px}
+.fin-item{background:var(--accent-soft); border:1px solid var(--line); border-radius:10px; padding:14px 16px}
+.fin-item .lbl{font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin-bottom:4px}
+.fin-item .val{font-size:22px; font-weight:800; color:var(--ink)}
+
+/* ---------- chips / bars ---------- */
+.chip{
+  display:inline-block; padding:2px 9px; border-radius:999px; font-size:10px;
+  font-weight:750; letter-spacing:.1em; text-transform:uppercase; color:#fff;
+}
+.chip.critical{background:var(--critical)} .chip.high{background:var(--high)}
+.chip.medium{background:var(--medium)} .chip.low{background:var(--low)}
+.chip.info{background:var(--info)}
+.bars{margin-top:6px}
+.bar-row{display:grid; grid-template-columns:78px 1fr 34px; gap:12px; align-items:center;
+  margin-bottom:7px; font-size:12px}
+.bar-track{height:9px; background:var(--line); border-radius:6px; overflow:hidden}
+.bar-fill{height:100%; border-radius:6px}
+.bar-n{text-align:right; font-weight:700; color:var(--ink)}
+
+/* ---------- interactive filter bar ---------- */
+.filter-bar{display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:16px}
+.filter-pill{
+  background:var(--card); border:1px solid var(--line); padding:6px 14px; border-radius:999px;
+  font-size:12px; font-weight:600; cursor:pointer; color:var(--muted);
+}
+.filter-pill.active{background:var(--accent); color:#fff; border-color:var(--accent)}
+.search-input{
+  flex:1; min-width:200px; background:var(--card); border:1px solid var(--line);
+  padding:8px 14px; border-radius:8px; font-size:13px; color:var(--ink);
+}
+
+/* ---------- table ---------- */
+table{width:100%; border-collapse:collapse; font-size:12.5px}
+th{
+  text-align:left; font-size:10px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--muted); border-bottom:2px solid var(--line); padding:8px 10px; font-weight:700;
+}
+td{padding:9px 10px; border-bottom:1px solid var(--line); vertical-align:top}
+tr:last-child td{border-bottom:none}
+td.num{text-align:right; white-space:nowrap}
+
+/* ---------- finding ---------- */
+.finding{
+  background:var(--card); border:1px solid var(--line); border-left:5px solid var(--info);
+  border-radius:10px; padding:20px 22px; margin-bottom:14px; break-inside:avoid;
+  transition:all .15s ease;
+}
+.finding.critical{border-left-color:var(--critical)}
+.finding.high{border-left-color:var(--high)}
+.finding.medium{border-left-color:var(--medium)}
+.finding.low{border-left-color:var(--low)}
+.finding.info{border-left-color:var(--info)}
+.finding header{display:flex; align-items:center; gap:10px; margin-bottom:8px}
+.finding header h3{font-size:15px; margin:0}
+.finding .tags{font-size:11px; color:var(--muted); margin-bottom:12px}
+.finding h4{font-size:12px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted);
+  margin:12px 0 4px}
+.finding ul.evidence{margin:0; padding-left:18px; font-family:"SFMono-Regular",Consolas,monospace;
+  font-size:12px; color:var(--ink)}
+.finding ul.evidence li{word-break:break-all; margin-bottom:4px}
+.finding .foot{display:flex; gap:16px; flex-wrap:wrap; margin-top:14px; padding-top:12px;
+  border-top:1px solid var(--line); font-size:11px; color:var(--muted)}
+
+.poc-box{display:flex; gap:8px; margin-top:10px}
+.btn-copy{
+  background:var(--line); border:none; padding:4px 10px; border-radius:6px;
+  font-size:11px; font-weight:600; cursor:pointer; color:var(--ink);
+}
+.btn-copy:hover{background:var(--accent); color:#fff}
+
+/* ---------- pitch cards ---------- */
+.pitch-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:18px; margin-top:20px}
+.pitch-card{
+  background:var(--card); border:1px solid var(--line); border-radius:14px; padding:24px;
+  position:relative; display:flex; flex-direction:column;
+}
+.pitch-card.featured{border:2px solid var(--accent); box-shadow:0 8px 30px rgba(15,118,110,.12)}
+.pkg-badge{display:inline-block; font-size:10px; font-weight:700; text-transform:uppercase;
+  letter-spacing:.1em; color:var(--accent); margin-bottom:8px}
+.pitch-card h3{font-size:18px; margin-bottom:6px}
+.pitch-card .price{font-size:28px; font-weight:800; color:var(--ink); margin:8px 0 2px}
+.pitch-card .hours{font-size:12px; color:var(--muted); margin-bottom:16px}
+.deliverables{margin:0 0 20px; padding-left:18px; font-size:12.5px; flex:1}
+.deliverables li{margin-bottom:8px}
+
+@media print{
+  body{background:#fff; color:#0f172a}
+  .top-toolbar, .filter-bar, .poc-box, .btn{display:none !important}
+  .wrap{max-width:100%; padding:0}
+  .card{border:1px solid #cbd5e1; page-break-inside:avoid}
+  .finding{page-break-inside:avoid}
+}
+
+.rt-head{padding:24px 0 18px;border-bottom:1px solid var(--line);margin-bottom:22px}
+.rt-kicker{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:10px}
+.rt-head h1{font-size:29px;letter-spacing:-0.02em;margin-bottom:6px}
+.rt-sub{font-size:12.5px;color:var(--muted);font-family:"SFMono-Regular",Consolas,monospace}
+.rt-meta{display:flex;flex-wrap:wrap;gap:8px 34px;margin:20px 0 0;padding:0}
+.rt-meta div{min-width:118px}
+.rt-meta dt{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--muted);margin-bottom:3px}
+.rt-meta dd{margin:0;font-size:13px;color:var(--ink);font-weight:600}
+.rt-verdict{display:flex;align-items:center;gap:34px;flex-wrap:wrap;
+  background:var(--card);border:1px solid var(--line);border-radius:12px;padding:24px 26px;margin-bottom:20px}
+.rt-grades{display:flex;align-items:center;gap:14px}
+.rt-g{width:74px;height:74px;border-radius:14px;display:flex;align-items:center;justify-content:center;
+  font-size:32px;font-weight:800;line-height:1}
+.rt-g-wrap{text-align:center}
+.rt-g-wrap .cap{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--muted);margin-top:7px}
+.rt-arrow{font-size:20px;color:var(--muted)}
+.rt-stats{display:flex;gap:28px;flex-wrap:wrap}
+.rt-stat .n{font-size:25px;font-weight:800;color:var(--ink);line-height:1.1}
+.rt-stat .l{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.rt-counters{display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:12px;margin-bottom:28px}
+.rt-count{background:var(--card);border:1px solid var(--line);border-left-width:4px;
+  border-radius:10px;padding:15px 17px}
+.rt-count .n{font-size:26px;font-weight:800;line-height:1.1;color:var(--ink)}
+.rt-count .l{font-size:11px;font-weight:600;color:var(--muted);margin-top:2px}
+.rt-count.fixed{border-left-color:#10b981}
+.rt-count.open{border-left-color:#f59e0b}
+.rt-count.new{border-left-color:#ef4444}
+.rt-count.regressed{border-left-color:#dc2626}
+.rt-count.improved{border-left-color:#3b82f6}
+.rt-table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:10px}
+.rt-table th{text-align:left;font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--line)}
+.rt-table td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+.rt-table td.num{text-align:right;font-variant-numeric:tabular-nums;font-weight:600;color:var(--ink)}
+.rt-table tr:last-child td{border-bottom:none}
+.rt-item{background:var(--card);border:1px solid var(--line);border-left-width:4px;
+  border-radius:8px;padding:13px 16px;margin-bottom:9px}
+.rt-item.fixed{border-left-color:#10b981}
+.rt-item.open{border-left-color:#f59e0b}
+.rt-item.new{border-left-color:#ef4444}
+.rt-item.regressed{border-left-color:#dc2626}
+.rt-item.improved{border-left-color:#3b82f6}
+.rt-item h4{font-size:13.5px;margin:0 0 5px}
+.rt-item .meta{font-size:11.5px;color:var(--muted);display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.rt-item .why{font-size:12.5px;color:var(--body);margin-top:7px}
+.rt-empty{font-size:12.5px;color:var(--muted);font-style:italic;padding:4px 0 2px}
+.rt-foot{margin-top:38px;padding-top:16px;border-top:1px solid var(--line);font-size:11.5px;color:var(--muted)}
+@media print{
+  .top-toolbar{display:none}
+  .rt-item,.rt-count,.rt-verdict{break-inside:avoid}
+}
+</style></head>
+<body><div class="wrap">
+
+<div class="top-toolbar">
+  <div class="brand"><span class="dot"></span>VulnScope Retest</div>
+  <div class="actions-bar"><button class="btn btn-primary" onclick="window.print()">Print / PDF</button></div>
+</div>
+
+<header class="rt-head">
+  <div class="rt-kicker">Remediation verification</div>
+  <h1>127.0.0.1:8099</h1>
+  <div class="rt-sub">http://127.0.0.1:8099</div>
+  <dl class="rt-meta">
+    <div><dt>Client</dt><dd>Demo Store Ltd</dd></div>
+    <div><dt>Assessor</dt><dd>Security Consultant</dd></div>
+    <div><dt>Baseline</dt><dd>16 November 2026, 13:03</dd></div>
+    <div><dt>Retest</dt><dd>16 November 2026, 13:04</dd></div>
+  </dl>
+</header>
+
+<section class="rt-verdict">
+  <div class="rt-grades">
+    <div class="rt-g-wrap">
+      <div class="rt-g" style="background:#dc26261a;color:#dc2626;border:1px solid #dc262640">F</div>
+      <div class="cap">Before</div>
+    </div>
+    <div class="rt-arrow">&rarr;</div>
+    <div class="rt-g-wrap">
+      <div class="rt-g" style="background:#ef44441a;color:#ef4444;border:1px solid #ef444440">E</div>
+      <div class="cap">After</div>
+    </div>
+  </div>
+  <div class="rt-stats">
+    <div class="rt-stat"><div class="n">100</div><div class="l">Score before</div></div>
+    <div class="rt-stat"><div class="n">71</div><div class="l">Score after</div></div>
+    <div class="rt-stat"><div class="n" style="color:#10b981">-29</div><div class="l">Risk change</div></div>
+    <div class="rt-stat"><div class="n">59%</div><div class="l">Fix rate</div></div>
+  </div>
+</section>
+
+<div class="rt-counters">
+  <div class="rt-count fixed"><div class="n">22</div><div class="l">Resolved</div></div>
+  <div class="rt-count open"><div class="n">15</div><div class="l">Still open</div></div>
+  <div class="rt-count regressed"><div class="n">0</div><div class="l">Regressed</div></div>
+  <div class="rt-count improved"><div class="n">0</div><div class="l">Improved</div></div>
+  <div class="rt-count new"><div class="n">1</div><div class="l">New</div></div>
+</div>
+
+<section>
+  <div class="sec-head"><h2>Verdict</h2></div>
+  <p>22 of 37 findings are resolved. Risk score moved from
+  <b>100</b> to <b>71</b>, grade
+  <b>F</b> to <b>E</b>.
+  3 high or critical issue(s) remain open — close these before the next release.</p>
+</section>
+
+<section>
+  <div class="sec-head"><h2>Severity breakdown</h2></div>
+  <table class="rt-table">
+    <thead><tr><th>Severity</th><th style="text-align:right">Baseline</th>
+    <th style="text-align:right">Retest</th><th style="text-align:right">Change</th></tr></thead>
+    <tbody><tr><td><span class='chip critical'>Critical</span></td><td class='num'>8</td><td class='num'>0</td><td class='num'>-8</td></tr><tr><td><span class='chip high'>High</span></td><td class='num'>9</td><td class='num'>3</td><td class='num'>-6</td></tr><tr><td><span class='chip medium'>Medium</span></td><td class='num'>9</td><td class='num'>4</td><td class='num'>-5</td></tr><tr><td><span class='chip low'>Low</span></td><td class='num'>7</td><td class='num'>5</td><td class='num'>-2</td></tr><tr><td><span class='chip info'>Info</span></td><td class='num'>4</td><td class='num'>4</td><td class='num'>0</td></tr></tbody>
+  </table>
+</section>
+
+
+<section>
+  <div class="sec-head"><h2>Still open <span style="color:var(--muted);font-weight:600">(15)</span></h2></div>
+  <p style="font-size:12.5px;color:var(--muted);margin:-4px 0 13px">Priority for the next round.</p>
+  
+  <div class="rt-item open">
+    <h4>Could not establish a TLS connection on port 443</h4>
+    <div class="meta"><span class="chip high">High</span><span><code>tls-unreachable</code></span>
+      <span>Encryption</span>
+      </div>
+    <div class="why">Unchanged — still reproducible exactly as before.</div>
+  </div>
+  <div class="rt-item open">
+    <h4>Missing Anti-CSRF Protection on State-Changing Form</h4>
+    <div class="meta"><span class="chip high">High</span><span><code>missing-csrf-token-1</code></span>
+      <span>Authentication &amp; Session</span>
+      </div>
+    <div class="why">Unchanged — still reproducible exactly as before.</div>
+  </div>
+  <div class="rt-item open">
+    <h4>Missing Anti-CSRF Protection on State-Changing Form</h4>
+    <div class="meta"><span class="chip high">High</span><span><code>missing-csrf-token-2</code></span>
+      <span>Authentication &amp; Session</span>
+      </div>
+    <div class="why">Unchanged — still reproducible exactly as before.</div>
+  </div>
+  <div class="rt-item open">
+    <h4>Absence of Rate Limiting on Authentication Endpoint</h4>
+    <div class="meta"><span class="chip medium">Medium</span><span><code>missing-rate-limiting-authentication</code></span>
+      <span>Authentication &amp; Session</span>
+      </div>
+    <div class="why">Unchanged — still reproducible exactly as before.</div>
+  </div>
+  <div class="rt-item open">
+    <h4>Directory listing is enabled</h4>
+    <div class="meta"><span class="chip medium">Medium</span><span><code>directory-listing</code></span>
+      <span>Misconfiguration</span>
+      </div>
+    <div class="why">Unchanged — still reproducible exactly as before.</div>
+  </div>
+  <div class="rt-item open">
+    <h4>Open redirect via parameter &#x27;url&#x27;</h4>
+    <div class="meta"><span class="chip medium">Medium</span><span><code>open-redirect-url</code></span>
+      <span>Injection</span>
+      </div>
+    <div class="why">Unchanged — still reproducible exactly as before.</div>
+  </div>
+  <div class="rt-item open">
+    <h4>Outdated jQuery 1.12.4 (known XSS issues)</h4>
+    <div class="meta"><span class="chip medium">Medium</span><span><code>outdated-jquery</code></span>
+      <span>Outdated Software</span>
+      </div>
+    <div class="why">Unchanged — still reproducible exactly as before.</div>
+  </div>
+  <div class="rt-item open">
+    <h4>External links open with target=_blank but no rel=noopener</h4>
+    <div class="meta"><span class="chip low">Low</span><span><code>tabnabbing</code></span>
+      <span>Client-Side</span>
+      </div>
+    <div class="why">Unchanged — still reproducible exactly as before.</div>
+  </div>
+  <div class="rt-item open">
+    <h4>HTML comments reveal internal information</h4>
+    <div class="meta"><span class="chip low">Low</span><span><code>sensitive-comments</code></span>
+      <span>Information Disclosure</span>
+      </div>
+    <div class="why">Unchanged — still reproducible exactly as before.</div>
+  </div>
+  <div class="rt-item open">
+    <h4>Technology versions disclosed in response headers</h4>
+    <div class="meta"><span class="chip low">Low</span><span><code>version-disclosure-headers</code></span>
+      <span>Information Disclosure</span>
+      </div>
+    <div class="why">Unchanged — still reproducible exactly as before.</div>
+  </div>
+  <div class="rt-item open">
+    <h4>Third-party scripts loaded without Subresource Integrity</h4>
+    <div class="meta"><span class="chip low">Low</span><span><code>missing-sri</code></span>
+      <span>Supply Chain</span>
+      </div>
+    <div class="why">Unchanged — still reproducible exactly as before.</div>
+  </div>
+  <div class="rt-item open">
+    <h4>Cross-Origin-Opener-Policy (COOP) header is missing</h4>
+    <div class="meta"><span class="chip info">Info</span><span><code>hdr-missing-cross-origin-opener-policy</code></span>
+      <span>Security Headers</span>
+      </div>
+    <div class="why">Unchanged — still reproducible exactly as before.</div>
+  </div>
+  <div class="rt-item open">
+    <h4>No web application firewall detected</h4>
+    <div class="meta"><span class="chip info">Info</span><span><code>no-waf</code></span>
+      <span>Defence in Depth</span>
+      </div>
+    <div class="why">Unchanged — still reproducible exactly as before.</div>
+  </div>
+  <div class="rt-item open">
+    <h4>Password field allows browser autocomplete</h4>
+    <div class="meta"><span class="chip info">Info</span><span><code>password-autocomplete</code></span>
+      <span>Client-Side</span>
+      </div>
+    <div class="why">Unchanged — still reproducible exactly as before.</div>
+  </div>
+  <div class="rt-item open">
+    <h4>robots.txt points at sensitive paths</h4>
+    <div class="meta"><span class="chip info">Info</span><span><code>robots-hints</code></span>
+      <span>Information Disclosure</span>
+      </div>
+    <div class="why">Unchanged — still reproducible exactly as before.</div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><h2>Regressed <span style="color:var(--muted);font-weight:600">(0)</span></h2></div>
+  <p style="font-size:12.5px;color:var(--muted);margin:-4px 0 13px">These got worse — inspect the recent changes.</p>
+  <div class="rt-empty">No regressions.</div>
+</section>
+
+<section>
+  <div class="sec-head"><h2>New <span style="color:var(--muted);font-weight:600">(1)</span></h2></div>
+  <p style="font-size:12.5px;color:var(--muted);margin:-4px 0 13px">Detected only in the second scan.</p>
+  
+  <div class="rt-item new">
+    <h4>CSP has no frame-ancestors directive</h4>
+    <div class="meta"><span class="chip low">Low</span><span><code>csp-no-frame-ancestors</code></span>
+      <span>Security Headers</span>
+      </div>
+    <div class="why">Appeared only in the second scan — check what changed.</div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><h2>Improved <span style="color:var(--muted);font-weight:600">(0)</span></h2></div>
+  <p style="font-size:12.5px;color:var(--muted);margin:-4px 0 13px">Severity reduced but not eliminated.</p>
+  <div class="rt-empty">None.</div>
+</section>
+
+<section>
+  <div class="sec-head"><h2>Resolved <span style="color:var(--muted);font-weight:600">(22)</span></h2></div>
+  <p style="font-size:12.5px;color:var(--muted);margin:-4px 0 13px">Confirmed gone on re-scan.</p>
+  
+  <div class="rt-item fixed">
+    <h4>Apache 2.4.49 is vulnerable to CVE-2021-41773 (path traversal / RCE)</h4>
+    <div class="meta"><span class="chip critical">Critical</span><span><code>cve-2021-41773</code></span>
+      <span>Outdated Software</span>
+      </div>
+    <div class="why">No longer detected on re-scan.</div>
+  </div>
+  <div class="rt-item fixed">
+    <h4>CORS reflects any origin with credentials enabled</h4>
+    <div class="meta"><span class="chip critical">Critical</span><span><code>cors-reflect-credentials</code></span>
+      <span>Misconfiguration</span>
+      </div>
+    <div class="why">No longer detected on re-scan.</div>
+  </div>
+  <div class="rt-item fixed">
+    <h4>Database dump exposed</h4>
+    <div class="meta"><span class="chip critical">Critical</span><span><code>exposed-backup.sql</code></span>
+      <span>Sensitive File Exposure</span>
+      </div>
+    <div class="why">No longer detected on re-scan.</div>
+  </div>
+  <div class="rt-item fixed">
+    <h4>Environment file with secrets exposed</h4>
+    <div class="meta"><span class="chip critical">Critical</span><span><code>exposed-.env</code></span>
+      <span>Sensitive File Exposure</span>
+      </div>
+    <div class="why">No longer detected on re-scan.</div>
+  </div>
+  <div class="rt-item fixed">
+    <h4>Exposed Git repository configuration</h4>
+    <div class="meta"><span class="chip critical">Critical</span><span><code>exposed-.git/config</code></span>
+      <span>Sensitive File Exposure</span>
+      </div>
+    <div class="why">No longer detected on re-scan.</div>
+  </div>
+  <div class="rt-item fixed">
+    <h4>Path traversal / local file inclusion in &#x27;file&#x27;</h4>
+    <div class="meta"><span class="chip critical">Critical</span><span><code>path-traversal-file</code></span>
+      <span>Injection</span>
+      </div>
+    <div class="why">No longer detected on re-scan.</div>
+  </div>
+  <div class="rt-item fixed">
+    <h4>Server-side template injection in &#x27;name&#x27;</h4>
+    <div class="meta"><span class="chip critical">Critical</span><span><code>ssti-name</code></span>
+      <span>Injection</span>
+      </div>
+    <div class="why">No longer detected on re-scan.</div>
+  </div>
+  <div class="rt-item fixed">
+    <h4>SQL injection in parameter &#x27;q&#x27; (MySQL)</h4>
+    <div class="meta"><span class="chip critical">Critical</span><span><code>sqli-error-q</code></span>
+      <span>Injection</span>
+      </div>
+    <div class="why">No longer detected on re-scan.</div>
+  </div>
+  <div class="rt-item fixed">
+    <h4>Content-Security-Policy header is missing</h4>
+    <div class="meta"><span class="chip high">High</span><span><code>hdr-missing-content-security-policy</code></span>
+      <span>Security Headers</span>
+      </div>
+    <div class="why">No longer detected on re-scan.</div>
+  </div>
+  <div class="rt-item fixed">
+    <h4>Cookies missing the Secure flag: PHPSESSID</h4>
+    <div class="meta"><span class="chip high">High</span><span><code>cookie-no-secure</code></span>
+      <span>Session Management</span>
+      </div>
+    <div class="why">No longer detected on re-scan.</div>
+  </div>
+  <div class="rt-item fixed">
+    <h4>End-of-life Apache 2.4.49 in production</h4>
+    <div class="meta"><span class="chip high">High</span><span><code>outdated-apache</code></span>
+      <span>Outdated Software</span>
+      </div>
+    <div class="why">No longer detected on re-scan.</div>
+  </div>
+  <div class="rt-item fixed">
+    <h4>Reflected XSS in parameter &#x27;name&#x27;</h4>
+    <div class="meta"><span class="chip high">High</span><span><code>xss-reflected-name</code></span>
+      <span>Injection</span>
+      </div>
+    <div class="why">No longer detected on re-scan.</div>
+  </div>
+  <div class="rt-item fixed">
+    <h4>Reflected XSS in parameter &#x27;q&#x27;</h4>
+    <div class="meta"><span class="chip high">High</span><span><code>xss-reflected-q</code></span>
+      <span>Injection</span>
+      </div>
+    <div class="why">No longer detected on re-scan.</div>
+  </div>
+  <div class="rt-item fixed">
+    <h4>Reflected XSS through a form field</h4>
+    <div class="meta"><span class="chip high">High</span><span><code>xss-form-/search</code></span>
+      <span>Injection</span>
+      </div>
+    <div class="why">No longer detected on re-scan.</div>
+  </div>
+  <div class="rt-item fixed">
+    <h4>Cookies without SameSite attribute: PHPSESSID</h4>
+    <div class="meta"><span class="chip medium">Medium</span><span><code>cookie-no-samesite</code></span>
+      <span>Session Management</span>
+      </div>
+    <div class="why">No longer detected on re-scan.</div>
+  </div>
+  <div class="rt-item fixed">
+    <h4>Dangerous HTTP methods advertised: PUT</h4>
+    <div class="meta"><span class="chip medium">Medium</span><span><code>http-dangerous-methods</code></span>
+      <span>Misconfiguration</span>
+      </div>
+    <div class="why">No longer detected on re-scan.</div>
+  </div>
+  <div class="rt-item fixed">
+    <h4>HTTP TRACE method is enabled</h4>
+    <div class="meta"><span class="chip medium">Medium</span><span><code>http-trace-enabled</code></span>
+      <span>Misconfiguration</span>
+      </div>
+    <div class="why">No longer detected on re-scan.</div>
+  </div>
+  <div class="rt-item fixed">
+    <h4>Page can be framed by any site (clickjacking)</h4>
+    <div class="meta"><span class="chip medium">Medium</span><span><code>clickjacking</code></span>
+      <span>Security Headers</span>
+      </div>
+    <div class="why">No longer detected on re-scan.</div>
+  </div>
+  <div class="rt-item fixed">
+    <h4>Session cookies readable from JavaScript: PHPSESSID</h4>
+    <div class="meta"><span class="chip medium">Medium</span><span><code>cookie-no-httponly</code></span>
+      <span>Session Management</span>
+      </div>
+    <div class="why">No longer detected on re-scan.</div>
+  </div>
+  <div class="rt-item fixed">
+    <h4>Permissions-Policy header is missing</h4>
+    <div class="meta"><span class="chip low">Low</span><span><code>hdr-missing-permissions-policy</code></span>
+      <span>Security Headers</span>
+      </div>
+    <div class="why">No longer detected on re-scan.</div>
+  </div>
+  <div class="rt-item fixed">
+    <h4>Referrer-Policy header is missing</h4>
+    <div class="meta"><span class="chip low">Low</span><span><code>hdr-missing-referrer-policy</code></span>
+      <span>Security Headers</span>
+      </div>
+    <div class="why">No longer detected on re-scan.</div>
+  </div>
+  <div class="rt-item fixed">
+    <h4>X-Content-Type-Options header is missing</h4>
+    <div class="meta"><span class="chip low">Low</span><span><code>hdr-missing-x-content-type-options</code></span>
+      <span>Security Headers</span>
+      </div>
+    <div class="why">No longer detected on re-scan.</div>
+  </div>
+</section>
+
+<div class="rt-foot">
+  Generated 16 November 2026, 13:07 · findings matched by stable key ·
+  both scans produced by VulnScope against the same target with identical options.
+</div>
+
+</div></body></html>
