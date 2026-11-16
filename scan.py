@@ -141,6 +141,7 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
 """,
     )
     p.add_argument("target", nargs="?", default="", help="URL or domain to assess, e.g. https://example.com")
+    p.add_argument("-f", "--targets-file", help="path to a text file containing target URLs (one per line) for batch scanning")
     p.add_argument("-y", "--authorized", action="store_true",
                    help="confirm you have written authorisation (skips the prompt)")
     p.add_argument("--diff", nargs=2, metavar=("BASELINE", "CURRENT"),
@@ -180,55 +181,10 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
     return p.parse_args(argv)
 
 
-def main(argv: List[str]) -> int:
-    args = parse_args(argv)
-
-    say(render_banner(__version__))
-
-    # Mode 1: CI/CD Workflow Generation
-    if args.generate_ci:
-        if args.generate_ci == "github":
-            content = generate_github_workflow()
-            out_file = ".github/workflows/vulnscope.yml"
-            os.makedirs(".github/workflows", exist_ok=True)
-            with open(out_file, "w", encoding="utf-8") as fh:
-                fh.write(content)
-            say(c_green(f"  ✔ Generated GitHub Actions security workflow in: {out_file}\n"))
-        elif args.generate_ci == "gitlab":
-            content = generate_gitlab_ci()
-            out_file = ".gitlab-ci.yml"
-            with open(out_file, "w", encoding="utf-8") as fh:
-                fh.write(content)
-            say(c_green(f"  ✔ Generated GitLab CI security configuration in: {out_file}\n"))
-        return 0
-
-    # Mode 2: Delta Comparison
-    if args.diff:
-        b_file, c_file = args.diff
-        if not os.path.exists(b_file) or not os.path.exists(c_file):
-            say(c_red("  ! Error: Both baseline and current scan JSON files must exist."))
-            return 2
-        diff = compare_files(b_file, c_file)
-        say(render_delta_card(diff))
-        say("")
-        diff_formats = tuple(f for f in ("html", "md", "json")
-                             if f in [x.strip() for x in args.formats.split(",")])
-        if diff_formats:
-            written = write_diff_reports(diff, args.out, diff_formats)
-            for path in written:
-                say(f"  {c_slate('report')}  {c_emerald(path)}")
-            say("")
-        return 0
-
-    # Mode 3: Target Assessment
-    if not args.target:
-        say(c_red("  ! Error: Please specify a target URL to assess."))
-        say("    Usage: python scan.py https://target.com --authorized\n")
-        return 2
-
-    base_url, host = normalise_target(args.target)
+def assess_target(target_str: str, args: argparse.Namespace) -> int:
+    base_url, host = normalise_target(target_str)
     if not host:
-        say(c_red("  ! Error: Could not parse a valid hostname from target coordinate.\n"))
+        say(c_red(f"  ! Error: Could not parse a valid hostname from: {target_str}\n"))
         return 2
 
     if not args.authorized:
@@ -338,6 +294,74 @@ def main(argv: List[str]) -> int:
     say(render_artifacts_tree(paths))
     say("")
     return 0
+
+
+def main(argv: List[str]) -> int:
+    args = parse_args(argv)
+
+    say(render_banner(__version__))
+
+    # Mode 1: CI/CD Workflow Generation
+    if args.generate_ci:
+        if args.generate_ci == "github":
+            content = generate_github_workflow()
+            out_file = ".github/workflows/vulnscope.yml"
+            os.makedirs(".github/workflows", exist_ok=True)
+            with open(out_file, "w", encoding="utf-8") as fh:
+                fh.write(content)
+            say(c_green(f"  ✔ Generated GitHub Actions security workflow in: {out_file}\n"))
+        elif args.generate_ci == "gitlab":
+            content = generate_gitlab_ci()
+            out_file = ".gitlab-ci.yml"
+            with open(out_file, "w", encoding="utf-8") as fh:
+                fh.write(content)
+            say(c_green(f"  ✔ Generated GitLab CI security configuration in: {out_file}\n"))
+        return 0
+
+    # Mode 2: Delta Comparison
+    if args.diff:
+        b_file, c_file = args.diff
+        if not os.path.exists(b_file) or not os.path.exists(c_file):
+            say(c_red("  ! Error: Both baseline and current scan JSON files must exist."))
+            return 2
+        diff = compare_files(b_file, c_file)
+        say(render_delta_card(diff))
+        say("")
+        diff_formats = tuple(f for f in ("html", "md", "json")
+                             if f in [x.strip() for x in args.formats.split(",")])
+        if diff_formats:
+            written = write_diff_reports(diff, args.out, diff_formats)
+            for path in written:
+                say(f"  {c_slate('report')}  {c_emerald(path)}")
+            say("")
+        return 0
+
+    # Mode 3: Batch Targets File Assessment
+    if args.targets_file:
+        if not os.path.exists(args.targets_file):
+            say(c_red(f"  ! Error: Targets file not found: {args.targets_file}\n"))
+            return 2
+        with open(args.targets_file, "r", encoding="utf-8") as fh:
+            targets = [line.strip() for line in fh if line.strip() and not line.strip().startswith("#")]
+        if not targets:
+            say(c_yellow(f"  ! Warning: No valid targets found in: {args.targets_file}\n"))
+            return 2
+
+        say(c_cyan(f"\n  [⚡ BATCH SCANNING MODE] Found {len(targets)} targets in queue."))
+        for idx, t in enumerate(targets, 1):
+            say(bold(c_white(f"\n═══ [TARGET {idx}/{len(targets)}] {t} ═══\n")))
+            assess_target(t, args)
+        say(c_green(f"\n  ✔ All {len(targets)} batch targets assessed successfully.\n"))
+        return 0
+
+    # Mode 4: Single Target Assessment
+    if not args.target:
+        say(c_red("  ! Error: Please specify a target URL or pass -f/--targets-file."))
+        say("    Usage: python scan.py https://target.com --authorized")
+        say("    Batch: python scan.py -f targets.txt --authorized\n")
+        return 2
+
+    return assess_target(args.target, args)
 
 
 if __name__ == "__main__":
