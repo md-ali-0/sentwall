@@ -1,0 +1,9 @@
+# Normalise line endings so the repo behaves the same on Windows and Linux/macOS
+* text=auto eol=lf
+
+*.py   text eol=lf
+*.md   text eol=lf
+*.txt  text eol=lf
+
+*.pdf  binary
+*.png  binary

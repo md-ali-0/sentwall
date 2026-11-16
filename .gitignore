@@ -1,0 +1,34 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+build/
+dist/
+
+# --- virtual environments ---
+.venv/
+venv/
+env/
+ENV/
+
+# --- scan output: client data must never be committed ---
+reports/**
+!reports/sample/
+!reports/sample/**
+
+# --- secrets & local config ---
+.env
+.env.*
+*.pem
+*.key
+*.log
+*.pdf.tmp
+
+# --- editors / OS ---
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini

@@ -1,0 +1,1060 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Security Assessment &mdash; 127.0.0.1</title>
+<style>
+:root{
+  --ink:#0f172a; --body:#25324a; --muted:#64748b; --line:#e2e8f0;
+  --bg:#f4f6fa; --card:#ffffff; --accent:#0f766e; --accent-soft:#ecfdf5;
+  --critical:#8b1a1a; --high:#c62828; --medium:#d97706; --low:#2563eb; --info:#64748b;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--body);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  font-size:14px; line-height:1.62; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1000px; margin:0 auto; padding:32px 20px 80px}
+h1,h2,h3,h4{color:var(--ink); margin:0; line-height:1.3; font-weight:650; letter-spacing:-0.01em}
+p{margin:0 0 12px}
+a{color:var(--accent); text-decoration:none}
+code,pre{font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace}
+pre{
+  background:#0f172a; color:#e2e8f0; padding:14px 16px; border-radius:8px;
+  font-size:12px; line-height:1.55; overflow-x:auto; white-space:pre-wrap;
+  word-break:break-word; margin:8px 0 0;
+}
+pre.fix{background:#f8fafc; color:#1e293b; border:1px solid var(--line)}
+
+/* ---------- cover ---------- */
+.cover{
+  background:linear-gradient(140deg,#0b1220 0%,#12263a 55%,#0f766e 160%);
+  color:#e8eef6; border-radius:18px; padding:44px 40px; margin-bottom:28px;
+  position:relative; overflow:hidden;
+}
+.cover:after{
+  content:""; position:absolute; right:-90px; top:-90px; width:320px; height:320px;
+  background:radial-gradient(circle,rgba(45,212,191,.28),transparent 68%); border-radius:50%;
+}
+.cover .kicker{
+  font-size:11px; letter-spacing:.22em; text-transform:uppercase;
+  color:#7dd3c0; font-weight:700; margin-bottom:14px;
+}
+.cover h1{color:#fff; font-size:34px; letter-spacing:-0.02em; margin-bottom:6px}
+.cover .target{font-size:15px; color:#a8bccd; word-break:break-all}
+.cover .grid{display:flex; flex-wrap:wrap; gap:24px 30px; margin-top:28px; position:relative; z-index:2}
+.cover .grid div{min-width:92px}
+.cover .grid dt{font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:#7f97ab; margin-bottom:3px}
+.cover .grid dd{margin:0; font-size:14px; color:#e8eef6; font-weight:600}
+.grade-badge{
+  position:absolute; right:40px; bottom:38px; text-align:center; z-index:2;
+}
+.grade-badge .g{
+  font-size:64px; font-weight:800; line-height:1; color:#fff;
+  text-shadow:0 6px 30px rgba(0,0,0,.35);
+}
+.grade-badge .l{font-size:10px; letter-spacing:.18em; text-transform:uppercase; color:#9fb4c6}
+
+/* ---------- sections ---------- */
+section{margin-bottom:34px}
+.sec-head{display:flex; align-items:baseline; gap:12px; margin-bottom:14px;
+  border-bottom:2px solid var(--line); padding-bottom:8px}
+.sec-head h2{font-size:19px}
+.sec-head .num{font-size:11px; font-weight:700; color:var(--accent); letter-spacing:.1em}
+.card{background:var(--card); border:1px solid var(--line); border-radius:12px; padding:22px 24px}
+.card + .card{margin-top:14px}
+
+/* ---------- score row ---------- */
+.score-row{display:flex; gap:20px; flex-wrap:wrap; align-items:stretch}
+.gauge-box{flex:0 0 210px; display:flex; flex-direction:column; align-items:center;
+  justify-content:center; padding:18px}
+.gauge{width:150px; height:150px; border-radius:50%; display:grid; place-items:center; position:relative}
+.gauge .inner{
+  width:112px; height:112px; background:#fff; border-radius:50%;
+  display:grid; place-items:center; text-align:center;
+}
+.gauge .val{font-size:34px; font-weight:750; color:var(--ink); line-height:1}
+.gauge .lbl{font-size:9px; letter-spacing:.16em; text-transform:uppercase; color:var(--muted); margin-top:4px}
+.stat-grid{flex:1; display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:10px}
+.stat{background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px 16px}
+.stat .n{font-size:26px; font-weight:750; line-height:1.1}
+.stat .t{font-size:11px; color:var(--muted); letter-spacing:.06em; text-transform:uppercase; margin-top:2px}
+
+/* ---------- chips / bars ---------- */
+.chip{
+  display:inline-block; padding:2px 9px; border-radius:999px; font-size:10px;
+  font-weight:750; letter-spacing:.1em; text-transform:uppercase; color:#fff;
+}
+.chip.critical{background:var(--critical)} .chip.high{background:var(--high)}
+.chip.medium{background:var(--medium)} .chip.low{background:var(--low)}
+.chip.info{background:var(--info)}
+.bars{margin-top:6px}
+.bar-row{display:grid; grid-template-columns:78px 1fr 34px; gap:12px; align-items:center;
+  margin-bottom:7px; font-size:12px}
+.bar-track{height:9px; background:#eef2f7; border-radius:6px; overflow:hidden}
+.bar-fill{height:100%; border-radius:6px}
+.bar-n{text-align:right; font-weight:700; color:var(--ink)}
+
+/* ---------- table ---------- */
+table{width:100%; border-collapse:collapse; font-size:12.5px}
+th{
+  text-align:left; font-size:10px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--muted); border-bottom:2px solid var(--line); padding:8px 10px; font-weight:700;
+}
+td{padding:9px 10px; border-bottom:1px solid #eef2f7; vertical-align:top}
+tr:last-child td{border-bottom:none}
+td.num{text-align:right; white-space:nowrap}
+
+/* ---------- finding ---------- */
+.finding{
+  background:var(--card); border:1px solid var(--line); border-left:5px solid var(--info);
+  border-radius:10px; padding:20px 22px; margin-bottom:14px; break-inside:avoid;
+}
+.finding.critical{border-left-color:var(--critical)}
+.finding.high{border-left-color:var(--high)}
+.finding.medium{border-left-color:var(--medium)}
+.finding.low{border-left-color:var(--low)}
+.finding header{display:flex; align-items:flex-start; gap:10px; flex-wrap:wrap; margin-bottom:10px}
+.finding header h3{font-size:16px; flex:1; min-width:240px}
+.finding .tags{font-size:11px; color:var(--muted); display:flex; gap:12px; flex-wrap:wrap; margin-bottom:14px}
+.finding h4{
+  font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted);
+  margin:16px 0 6px; font-weight:700;
+}
+.finding h4:first-of-type{margin-top:0}
+.finding ul{margin:0; padding-left:18px}
+.finding li{margin-bottom:4px}
+.finding ul.evidence li{
+  font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;
+  font-size:11.5px; color:#334155; background:#f8fafc; border:1px solid #eef2f7;
+  border-radius:5px; padding:4px 8px; list-style:none; margin-left:-18px; margin-bottom:5px;
+  word-break:break-all;
+}
+.finding .foot{
+  margin-top:14px; padding-top:10px; border-top:1px dashed var(--line);
+  font-size:11px; color:var(--muted); display:flex; gap:18px; flex-wrap:wrap;
+}
+.kv{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px 22px; margin-top:6px}
+.kv div{font-size:12.5px}
+.kv span{display:block; font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted)}
+
+/* ---------- misc ---------- */
+.callout{
+  border-radius:10px; padding:16px 18px; font-size:13px;
+  background:var(--accent-soft); border:1px solid #cdeee2; color:#14532d;
+}
+.callout.warn{background:#fff7ed; border-color:#fed7aa; color:#7c2d12}
+.note{font-size:12px; color:var(--muted)}
+.two-col{display:grid; grid-template-columns:1fr 1fr; gap:22px}
+@media(max-width:760px){.two-col{grid-template-columns:1fr}}
+.pill-list{display:flex; flex-wrap:wrap; gap:6px; margin-top:8px}
+.pill{background:#f1f5f9; border:1px solid var(--line); border-radius:6px; padding:3px 8px;
+  font-size:11px; color:#334155; font-family:Consolas,monospace}
+footer.rep{margin-top:44px; padding-top:16px; border-top:1px solid var(--line);
+  font-size:11px; color:var(--muted); display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap}
+
+@media print{
+  body{background:#fff; font-size:10.5pt}
+  .wrap{max-width:none; padding:0}
+  .cover{border-radius:0; -webkit-print-color-adjust:exact; print-color-adjust:exact}
+  .page-break{page-break-before:always}
+  .finding,.card,.stat{break-inside:avoid}
+  a{color:inherit}
+  pre{font-size:8.5pt}
+}
+@page{size:A4; margin:14mm}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="cover">
+    <div class="kicker">Web Application Security Assessment</div>
+    <h1>Security Assessment Report</h1>
+    <div class="target">http://127.0.0.1:8099</div>
+    <div class="grid">
+      <div><dt>Report ID</dt><dd>VS-4AC52381</dd></div>
+      <div><dt>Date</dt><dd>16 November 2026</dd></div>
+      <div><dt>Prepared for</dt><dd>Demo Store Ltd</dd></div>
+      <div><dt>Prepared by</dt><dd>Security Consultant</dd></div>
+      <div><dt>Findings</dt><dd>33</dd></div>
+    </div>
+    <div class="grade-badge">
+      <div class="g">F</div>
+      <div class="l">Security grade</div>
+    </div>
+  </div>
+
+  <section>
+    <div class="sec-head"><span class="num">01</span><h2>Executive summary</h2></div>
+    <div class="card"><p>The assessment identified <strong>14 high-impact issue(s)</strong> that should be treated as urgent, alongside 8 medium and 7 low-severity findings.</p><p>In total <strong>33 observations</strong> were recorded against <strong>http://127.0.0.1:8099</strong> during a non-intrusive assessment. The overall security score is <strong>100/100</strong> (grade F), described as: critical exposure - immediate action required.</p><p>The three items that matter most to the business:</p><ul><li><strong>Apache 2.4.49 is vulnerable to CVE-2021-41773 (path traversal / RCE)</strong> &mdash; Unauthenticated remote code execution on the web server.</li><li><strong>CORS reflects any origin with credentials enabled</strong> &mdash; Complete account takeover from a single malicious link: the attacker reads profile data, API tokens and personal information, and can perform actions…</li><li><strong>Database dump exposed</strong> &mdash; Mass disclosure of customer records, password hashes and business data - usually a reportable data breach.</li></ul><p class="note" style="margin-top:14px">Detected stack</p><div class="pill-list"><span class="pill">Apache: 2.4.49</span><span class="pill">Generator: WordPress 5.2</span><span class="pill">jQuery: 1.12.4</span></div><div class="callout" style="margin-top:18px"><strong>What this means in practice:</strong> an attacker with modest skill could likely reach customer data or take over accounts using only publicly available tools. Remediation should start this week.</div></div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="num">02</span><h2>Risk overview</h2></div>
+    <div class="score-row">
+      <div class="card gauge-box">
+        <div class="gauge" style="background:conic-gradient(#8b1a1a 360.0deg,#e8eef5 360.0deg)"><div class="inner"><div><div class="val" style="color:#8b1a1a">100</div><div class="lbl">risk / 100</div></div></div></div>
+        <div style="margin-top:12px;text-align:center;font-size:11.5px;color:var(--muted)">
+          Critical exposure - immediate action required
+        </div>
+      </div>
+      <div class="stat-grid">
+        <div class="stat"><div class="n" style="color:var(--critical)">8</div><div class="t">Critical</div></div>
+        <div class="stat"><div class="n" style="color:var(--high)">6</div><div class="t">High</div></div>
+        <div class="stat"><div class="n" style="color:var(--medium)">8</div><div class="t">Medium</div></div>
+        <div class="stat"><div class="n" style="color:var(--low)">7</div><div class="t">Low</div></div>
+        <div class="stat"><div class="n" style="color:var(--info)">4</div><div class="t">Info</div></div>
+        <div class="stat"><div class="n">125</div><div class="t">Requests</div></div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <h3 style="font-size:14px;margin-bottom:10px">Severity distribution</h3>
+      <div class="bars"><div class="bar-row"><div>Critical</div><div class="bar-track"><div class="bar-fill" style="width:24.2%;background:#8b1a1a"></div></div><div class="bar-n">8</div></div><div class="bar-row"><div>High</div><div class="bar-track"><div class="bar-fill" style="width:18.2%;background:#c62828"></div></div><div class="bar-n">6</div></div><div class="bar-row"><div>Medium</div><div class="bar-track"><div class="bar-fill" style="width:24.2%;background:#d97706"></div></div><div class="bar-n">8</div></div><div class="bar-row"><div>Low</div><div class="bar-track"><div class="bar-fill" style="width:21.2%;background:#2563eb"></div></div><div class="bar-n">7</div></div><div class="bar-row"><div>Info</div><div class="bar-track"><div class="bar-fill" style="width:12.1%;background:#6b7280"></div></div><div class="bar-n">4</div></div></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="num">03</span><h2>Findings summary</h2></div>
+    <div class="card" style="padding:12px 8px"><table><thead><tr><th>#</th><th>Severity</th><th>Finding</th><th>Category</th><th>CVSS</th><th>Fix effort</th></tr></thead><tbody><tr><td class='num'>1</td><td><span class="chip critical">critical</span></td><td>Apache 2.4.49 is vulnerable to CVE-2021-41773 (path traversal / RCE)</td><td>Outdated Software</td><td class='num'>9.8</td><td>Quick fix (under 1 hour)</td></tr><tr><td class='num'>2</td><td><span class="chip critical">critical</span></td><td>CORS reflects any origin with credentials enabled</td><td>Misconfiguration</td><td class='num'>9.3</td><td>Quick fix (under 1 hour)</td></tr><tr><td class='num'>3</td><td><span class="chip critical">critical</span></td><td>Database dump exposed</td><td>Sensitive File Exposure</td><td class='num'>9.8</td><td>Quick fix (under 1 hour)</td></tr><tr><td class='num'>4</td><td><span class="chip critical">critical</span></td><td>Environment file with secrets exposed</td><td>Sensitive File Exposure</td><td class='num'>9.8</td><td>Quick fix (under 1 hour)</td></tr><tr><td class='num'>5</td><td><span class="chip critical">critical</span></td><td>Exposed Git repository configuration</td><td>Sensitive File Exposure</td><td class='num'>9.8</td><td>Quick fix (under 1 hour)</td></tr><tr><td class='num'>6</td><td><span class="chip critical">critical</span></td><td>Path traversal / local file inclusion in &#x27;file&#x27;</td><td>Injection</td><td class='num'>9.1</td><td>Involved (1-3 days)</td></tr><tr><td class='num'>7</td><td><span class="chip critical">critical</span></td><td>SQL injection in parameter &#x27;q&#x27; (MySQL)</td><td>Injection</td><td class='num'>9.8</td><td>Involved (1-3 days)</td></tr><tr><td class='num'>8</td><td><span class="chip critical">critical</span></td><td>Server-side template injection in &#x27;name&#x27;</td><td>Injection</td><td class='num'>9.8</td><td>Involved (1-3 days)</td></tr><tr><td class='num'>9</td><td><span class="chip high">high</span></td><td>Content-Security-Policy header is missing</td><td>Security Headers</td><td class='num'>6.1</td><td>Quick fix (under 1 hour)</td></tr><tr><td class='num'>10</td><td><span class="chip high">high</span></td><td>Cookies missing the Secure flag: PHPSESSID</td><td>Session Management</td><td class='num'>7.1</td><td>Quick fix (under 1 hour)</td></tr><tr><td class='num'>11</td><td><span class="chip high">high</span></td><td>Could not establish a TLS connection on port 443</td><td>Encryption</td><td class='num'>7.5</td><td>Moderate (half a day)</td></tr><tr><td class='num'>12</td><td><span class="chip high">high</span></td><td>End-of-life Apache 2.4.49 in production</td><td>Outdated Software</td><td class='num'>7.5</td><td>Involved (1-3 days)</td></tr><tr><td class='num'>13</td><td><span class="chip high">high</span></td><td>Reflected XSS in parameter &#x27;name&#x27;</td><td>Injection</td><td class='num'>6.1</td><td>Moderate (half a day)</td></tr><tr><td class='num'>14</td><td><span class="chip high">high</span></td><td>Reflected XSS in parameter &#x27;q&#x27;</td><td>Injection</td><td class='num'>6.1</td><td>Moderate (half a day)</td></tr><tr><td class='num'>15</td><td><span class="chip medium">medium</span></td><td>Cookies without SameSite attribute: PHPSESSID</td><td>Session Management</td><td class='num'>6.5</td><td>Quick fix (under 1 hour)</td></tr><tr><td class='num'>16</td><td><span class="chip medium">medium</span></td><td>Directory listing is enabled</td><td>Misconfiguration</td><td class='num'>5.3</td><td>Quick fix (under 1 hour)</td></tr><tr><td class='num'>17</td><td><span class="chip medium">medium</span></td><td>HTTP TRACE method is enabled</td><td>Misconfiguration</td><td class='num'>5.3</td><td>Quick fix (under 1 hour)</td></tr><tr><td class='num'>18</td><td><span class="chip medium">medium</span></td><td>Open redirect via parameter &#x27;url&#x27;</td><td>Injection</td><td class='num'>6.1</td><td>Quick fix (under 1 hour)</td></tr><tr><td class='num'>19</td><td><span class="chip medium">medium</span></td><td>Outdated jQuery 1.12.4 (known XSS issues)</td><td>Outdated Software</td><td class='num'>6.1</td><td>Quick fix (under 1 hour)</td></tr><tr><td class='num'>20</td><td><span class="chip medium">medium</span></td><td>Page can be framed by any site (clickjacking)</td><td>Security Headers</td><td class='num'>4.3</td><td>Quick fix (under 1 hour)</td></tr><tr><td class='num'>21</td><td><span class="chip medium">medium</span></td><td>Session cookies readable from JavaScript: PHPSESSID</td><td>Session Management</td><td class='num'>6.5</td><td>Quick fix (under 1 hour)</td></tr><tr><td class='num'>22</td><td><span class="chip medium">medium</span></td><td>Dangerous HTTP methods advertised: PUT</td><td>Misconfiguration</td><td class='num'>5.3</td><td>Moderate (half a day)</td></tr><tr><td class='num'>23</td><td><span class="chip low">low</span></td><td>External links open with target=_blank but no rel=noopener</td><td>Client-Side</td><td class='num'>3.1</td><td>Quick fix (under 1 hour)</td></tr><tr><td class='num'>24</td><td><span class="chip low">low</span></td><td>HTML comments reveal internal information</td><td>Information Disclosure</td><td class='num'>3.1</td><td>Quick fix (under 1 hour)</td></tr><tr><td class='num'>25</td><td><span class="chip low">low</span></td><td>Permissions-Policy header is missing</td><td>Security Headers</td><td class='num'>3.1</td><td>Quick fix (under 1 hour)</td></tr><tr><td class='num'>26</td><td><span class="chip low">low</span></td><td>Referrer-Policy header is missing</td><td>Security Headers</td><td class='num'>3.1</td><td>Quick fix (under 1 hour)</td></tr><tr><td class='num'>27</td><td><span class="chip low">low</span></td><td>Technology versions disclosed in response headers</td><td>Information Disclosure</td><td class='num'>3.7</td><td>Quick fix (under 1 hour)</td></tr><tr><td class='num'>28</td><td><span class="chip low">low</span></td><td>Third-party scripts loaded without Subresource Integrity</td><td>Supply Chain</td><td class='num'>3.7</td><td>Quick fix (under 1 hour)</td></tr><tr><td class='num'>29</td><td><span class="chip low">low</span></td><td>X-Content-Type-Options header is missing</td><td>Security Headers</td><td class='num'>3.1</td><td>Quick fix (under 1 hour)</td></tr><tr><td class='num'>30</td><td><span class="chip info">info</span></td><td>Cross-Origin-Opener-Policy (COOP) header is missing</td><td>Security Headers</td><td class='num'>3.1</td><td>Quick fix (under 1 hour)</td></tr><tr><td class='num'>31</td><td><span class="chip info">info</span></td><td>No web application firewall detected</td><td>Defence in Depth</td><td class='num'>&ndash;</td><td>Moderate (half a day)</td></tr><tr><td class='num'>32</td><td><span class="chip info">info</span></td><td>Password field allows browser autocomplete</td><td>Client-Side</td><td class='num'>&ndash;</td><td>Quick fix (under 1 hour)</td></tr><tr><td class='num'>33</td><td><span class="chip info">info</span></td><td>robots.txt points at sensitive paths</td><td>Information Disclosure</td><td class='num'>&ndash;</td><td>Quick fix (under 1 hour)</td></tr></tbody></table></div>
+  </section>
+
+  <section class="page-break">
+    <div class="sec-head"><span class="num">04</span><h2>Detailed findings</h2></div>
+    
+<article class="finding critical">
+  <header>
+    <span class="chip critical">critical</span>
+    <h3>1. Apache 2.4.49 is vulnerable to CVE-2021-41773 (path traversal / RCE)</h3>
+  </header>
+  <div class="tags">CVSS ~9.8 &middot; CWE-22 &middot; A06:2021 Vulnerable and Outdated Components &middot; confidence: certain</div>
+
+  <h4>What we found</h4>
+  <p>This exact Apache version is affected by CVE-2021-41773 / CVE-2021-42013: a path traversal flaw in mod_proxy that allows reading files outside the document root and, with mod_cgi enabled, remote code execution.</p>
+  <h4>Business impact</h4><p>Unauthenticated remote code execution on the web server.</p>
+  <h4>Evidence</h4>
+  <ul class="evidence"><li>Server: Apache/2.4.49</li></ul>
+  <h4>How to fix it</h4><pre class="fix">Upgrade to Apache 2.4.51 or later immediately. As an interim mitigation, disable mod_cgi and require &#x27;Require all denied&#x27; on the default filesystem path.</pre>
+  
+  <div class="foot">
+    <span><strong>Category:</strong> Outdated Software</span>
+    <span><strong>Effort:</strong> Quick fix (under 1 hour)</span>
+    <span><strong>Location:</strong> http://127.0.0.1:8099</span>
+  </div>
+</article>
+<article class="finding critical">
+  <header>
+    <span class="chip critical">critical</span>
+    <h3>2. CORS reflects any origin with credentials enabled</h3>
+  </header>
+  <div class="tags">CVSS ~9.3 &middot; CWE-942 &middot; A01:2021 Broken Access Control &middot; confidence: certain</div>
+
+  <h4>What we found</h4>
+  <p>http://127.0.0.1:8099/ returned Access-Control-Allow-Origin: https://vulnscope-canary.example together with Access-Control-Allow-Credentials: true. Any website on the internet can therefore make authenticated cross-origin requests and read the responses as the logged-in victim.</p>
+  <h4>Business impact</h4><p>Complete account takeover from a single malicious link: the attacker reads profile data, API tokens and personal information, and can perform actions on the victim&#x27;s behalf.</p>
+  <h4>Evidence</h4>
+  <ul class="evidence"><li>GET http://127.0.0.1:8099/</li><li>Origin: https://vulnscope-canary.example</li><li>Access-Control-Allow-Origin: https://vulnscope-canary.example</li><li>Access-Control-Allow-Credentials: true</li></ul>
+  <h4>How to fix it</h4><pre class="fix">Never reflect the Origin header blindly. Use a strict allow-list:
+if origin in TRUSTED_ORIGINS: set ACAO=origin, ACAC=true
+else: do not send CORS headers at all.
+Also reject the &#x27;null&#x27; origin.</pre>
+  
+  <div class="foot">
+    <span><strong>Category:</strong> Misconfiguration</span>
+    <span><strong>Effort:</strong> Quick fix (under 1 hour)</span>
+    <span><strong>Location:</strong> http://127.0.0.1:8099/</span>
+  </div>
+</article>
+<article class="finding critical">
+  <header>
+    <span class="chip critical">critical</span>
+    <h3>3. Database dump exposed</h3>
+  </header>
+  <div class="tags">CVSS ~9.8 &middot; CWE-530 &middot; A01:2021 Broken Access Control &middot; confidence: certain</div>
+
+  <h4>What we found</h4>
+  <p>A SQL dump is downloadable. It contains full table data plus schema.</p>
+  <h4>Business impact</h4><p>Mass disclosure of customer records, password hashes and business data - usually a reportable data breach.</p>
+  <h4>Evidence</h4>
+  <ul class="evidence"><li>GET http://127.0.0.1:8099/backup.sql -&gt; HTTP 200 (71 bytes)</li><li>First lines: INSERT INTO users VALUES(1);</li></ul>
+  <h4>How to fix it</h4><pre class="fix">Delete the dump from the web root, store backups outside the document root or in object storage with signed URLs, and assess breach-notification obligations.</pre>
+  
+  <div class="foot">
+    <span><strong>Category:</strong> Sensitive File Exposure</span>
+    <span><strong>Effort:</strong> Quick fix (under 1 hour)</span>
+    <span><strong>Location:</strong> http://127.0.0.1:8099/backup.sql</span>
+  </div>
+</article>
+<article class="finding critical">
+  <header>
+    <span class="chip critical">critical</span>
+    <h3>4. Environment file with secrets exposed</h3>
+  </header>
+  <div class="tags">CVSS ~9.8 &middot; CWE-538 &middot; A02:2021 Cryptographic Failures &middot; confidence: certain</div>
+
+  <h4>What we found</h4>
+  <p>The .env file is downloadable. It normally contains database credentials, the application encryption key, mail passwords and third-party API keys.</p>
+  <h4>Business impact</h4><p>Direct database access, ability to forge session cookies with the app key, and full compromise of every integrated service.</p>
+  <h4>Evidence</h4>
+  <ul class="evidence"><li>GET http://127.0.0.1:8099/.env -&gt; HTTP 200 (68 bytes)</li><li>First lines: APP_NAME=TestShop | APP_KEY=base64:abcd1234SECRET</li></ul>
+  <h4>How to fix it</h4><pre class="fix">Deny access to dotfiles at the server, move the file above the web root, and rotate every credential it contains:
+location ~ /\.(?!well-known) { deny all; }</pre>
+  
+  <div class="foot">
+    <span><strong>Category:</strong> Sensitive File Exposure</span>
+    <span><strong>Effort:</strong> Quick fix (under 1 hour)</span>
+    <span><strong>Location:</strong> http://127.0.0.1:8099/.env</span>
+  </div>
+</article>
+<article class="finding critical">
+  <header>
+    <span class="chip critical">critical</span>
+    <h3>5. Exposed Git repository configuration</h3>
+  </header>
+  <div class="tags">CVSS ~9.8 &middot; CWE-538 &middot; A05:2021 Security Misconfiguration &middot; confidence: certain</div>
+
+  <h4>What we found</h4>
+  <p>The .git directory is publicly readable. An attacker can download the entire source history - including secrets that were committed and later &#x27;removed&#x27; - and then reconstruct the full application source.</p>
+  <h4>Business impact</h4><p>Complete source code disclosure, plus every credential, API key and database password that ever appeared in a commit. This typically leads to full server compromise.</p>
+  <h4>Evidence</h4>
+  <ul class="evidence"><li>GET http://127.0.0.1:8099/.git/config -&gt; HTTP 200 (50 bytes)</li></ul>
+  <h4>How to fix it</h4><pre class="fix">Block access at the web server and rotate any secret that was ever committed:
+location ~ /\.git { deny all; return 404; }
+Then rebuild the repository without the leaked secrets and force-push.</pre>
+  
+  <div class="foot">
+    <span><strong>Category:</strong> Sensitive File Exposure</span>
+    <span><strong>Effort:</strong> Quick fix (under 1 hour)</span>
+    <span><strong>Location:</strong> http://127.0.0.1:8099/.git/config</span>
+  </div>
+</article>
+<article class="finding critical">
+  <header>
+    <span class="chip critical">critical</span>
+    <h3>6. Path traversal / local file inclusion in &#x27;file&#x27;</h3>
+  </header>
+  <div class="tags">CVSS ~9.1 &middot; CWE-22 &middot; A01:2021 Broken Access Control &middot; confidence: certain</div>
+
+  <h4>What we found</h4>
+  <p>A relative path payload caused the server to return the contents of /etc/passwd. The parameter is used to build a filesystem path without validation or confinement to a base directory.</p>
+  <h4>Business impact</h4><p>Read of arbitrary server files - configuration, private keys, database credentials - and often escalation to remote code execution by including a file the attacker can upload.</p>
+  <h4>Evidence</h4>
+  <ul class="evidence"><li>GET http://127.0.0.1:8099/download?file=..%2F..%2F..%2F..%2F..%2F..%2Fetc%2Fpasswd</li><li>Response contained &#x27;root:x:0:0:&#x27;</li></ul>
+  <h4>How to fix it</h4><pre class="fix">Never pass user input to file APIs. Resolve the path and verify it stays inside the allowed directory:
+real = os.path.realpath(os.path.join(BASE, name))
+if not real.startswith(BASE + os.sep): abort(400)
+Better: map an opaque ID to a stored path instead of accepting names.</pre>
+  
+  <div class="foot">
+    <span><strong>Category:</strong> Injection</span>
+    <span><strong>Effort:</strong> Involved (1-3 days)</span>
+    <span><strong>Location:</strong> http://127.0.0.1:8099/download?file=report.txt</span>
+  </div>
+</article>
+<article class="finding critical">
+  <header>
+    <span class="chip critical">critical</span>
+    <h3>7. SQL injection in parameter &#x27;q&#x27; (MySQL)</h3>
+  </header>
+  <div class="tags">CVSS ~9.8 &middot; CWE-89 &middot; A03:2021 Injection &middot; confidence: certain</div>
+
+  <h4>What we found</h4>
+  <p>Appending a single quote to &#x27;q&#x27; produced a raw MySQL database error that does not appear on the normal page. The value is being concatenated directly into a SQL statement instead of being sent as a bound parameter.</p>
+  <h4>Business impact</h4><p>Full database read and write: customer records, password hashes, payment data and admin credentials. Depending on database privileges this often escalates to remote code execution on the server. This is a reportable data-breach risk.</p>
+  <h4>Evidence</h4>
+  <ul class="evidence"><li>GET http://127.0.0.1:8099/search?q=1%27</li><li>Database error signature: you have an error in your sql syntax</li></ul>
+  <h4>How to fix it</h4><pre class="fix">Use parameterised queries / prepared statements everywhere. Never build SQL by string concatenation.
+PHP: $stmt = $pdo-&gt;prepare(&#x27;SELECT * FROM t WHERE id = ?&#x27;);
+Java: PreparedStatement with setInt/setString
+Also apply least-privilege DB accounts and disable detailed DB errors in production.</pre>
+  
+  <div class="foot">
+    <span><strong>Category:</strong> Injection</span>
+    <span><strong>Effort:</strong> Involved (1-3 days)</span>
+    <span><strong>Location:</strong> http://127.0.0.1:8099/search</span>
+  </div>
+</article>
+<article class="finding critical">
+  <header>
+    <span class="chip critical">critical</span>
+    <h3>8. Server-side template injection in &#x27;name&#x27;</h3>
+  </header>
+  <div class="tags">CVSS ~9.8 &middot; CWE-94 &middot; A03:2021 Injection &middot; confidence: certain</div>
+
+  <h4>What we found</h4>
+  <p>A template expression was evaluated server-side: the payload {{1506*868}} was rendered as 1307208. User input is being compiled as template code.</p>
+  <h4>Business impact</h4><p>Depending on the template engine this escalates to arbitrary command execution on the server - typically full infrastructure compromise.</p>
+  <h4>Evidence</h4>
+  <ul class="evidence"><li>GET http://127.0.0.1:8099/render?name=%7B%7B1506%2A868%7D%7D</li><li>{{1506*868}} -&gt; 1307208</li></ul>
+  <h4>How to fix it</h4><pre class="fix">Never render user input as a template. Pass it as a variable, and use logic-less templates or sandboxed rendering.</pre>
+  
+  <div class="foot">
+    <span><strong>Category:</strong> Injection</span>
+    <span><strong>Effort:</strong> Involved (1-3 days)</span>
+    <span><strong>Location:</strong> http://127.0.0.1:8099/render?name=guest</span>
+  </div>
+</article>
+<article class="finding high">
+  <header>
+    <span class="chip high">high</span>
+    <h3>9. Content-Security-Policy header is missing</h3>
+  </header>
+  <div class="tags">CVSS ~6.1 &middot; CWE-693 &middot; A05:2021 Security Misconfiguration &middot; confidence: certain</div>
+
+  <h4>What we found</h4>
+  <p>Without a CSP the browser will execute any script that reaches the page. This is the single most effective defence-in-depth control against cross-site scripting (XSS), malicious third-party scripts and data injection.</p>
+  <h4>Business impact</h4><p>Raises the likelihood and blast radius of any injection flaw on the site; an attacker who lands one script gets a durable foothold in users&#x27; browsers.</p>
+  <h4>Evidence</h4>
+  <ul class="evidence"><li>GET http://127.0.0.1:8099/</li><li>Response headers did not include: content-security-policy</li></ul>
+  <h4>How to fix it</h4><pre class="fix">Publish a restrictive CSP, starting in report-only mode:
+Content-Security-Policy: default-src &#x27;self&#x27;; script-src &#x27;self&#x27;; object-src &#x27;none&#x27;; base-uri &#x27;self&#x27;; frame-ancestors &#x27;self&#x27;</pre>
+  
+  <div class="foot">
+    <span><strong>Category:</strong> Security Headers</span>
+    <span><strong>Effort:</strong> Quick fix (under 1 hour)</span>
+    <span><strong>Location:</strong> http://127.0.0.1:8099/</span>
+  </div>
+</article>
+<article class="finding high">
+  <header>
+    <span class="chip high">high</span>
+    <h3>10. Cookies missing the Secure flag: PHPSESSID</h3>
+  </header>
+  <div class="tags">CVSS ~7.1 &middot; CWE-614 &middot; A05:2021 Security Misconfiguration &middot; confidence: certain</div>
+
+  <h4>What we found</h4>
+  <p>These cookies can be sent over plain HTTP. A single unencrypted request - a mistyped URL, an http:// link, a shared network - exposes them to anyone listening on the wire.</p>
+  <h4>Business impact</h4><p>Session hijacking: an attacker who captures the cookie becomes the user without needing any password.</p>
+  <h4>Evidence</h4>
+  <ul class="evidence"><li>PHPSESSID: path</li></ul>
+  <h4>How to fix it</h4><pre class="fix">Set the Secure attribute on every cookie:
+Set-Cookie: session=...; Secure; HttpOnly; SameSite=Lax; Path=/</pre>
+  
+  <div class="foot">
+    <span><strong>Category:</strong> Session Management</span>
+    <span><strong>Effort:</strong> Quick fix (under 1 hour)</span>
+    <span><strong>Location:</strong> http://127.0.0.1:8099</span>
+  </div>
+</article>
+<article class="finding high">
+  <header>
+    <span class="chip high">high</span>
+    <h3>11. Could not establish a TLS connection on port 443</h3>
+  </header>
+  <div class="tags">CVSS ~7.5 &middot; CWE-319 &middot; A02:2021 Cryptographic Failures &middot; confidence: certain</div>
+
+  <h4>What we found</h4>
+  <p>No TLS handshake could be completed with the server on port 443. Either the site is HTTP-only, or the TLS stack is misconfigured.</p>
+  <h4>Business impact</h4><p>All traffic - including logins and payment data - travels unencrypted.</p>
+  <h4>Evidence</h4>
+  <ul class="evidence"><li>Error: [WinError 10061] No connection could be made because the target machine actively refused it</li></ul>
+  <h4>How to fix it</h4><pre class="fix">Install a valid certificate (Let&#x27;s Encrypt is free) and serve the site exclusively over HTTPS.</pre>
+  
+  <div class="foot">
+    <span><strong>Category:</strong> Encryption</span>
+    <span><strong>Effort:</strong> Moderate (half a day)</span>
+    
+  </div>
+</article>
+<article class="finding high">
+  <header>
+    <span class="chip high">high</span>
+    <h3>12. End-of-life Apache 2.4.49 in production</h3>
+  </header>
+  <div class="tags">CVSS ~7.5 &middot; CWE-1104 &middot; A06:2021 Vulnerable and Outdated Components &middot; confidence: certain</div>
+
+  <h4>What we found</h4>
+  <p>The server reports Apache 2.4.49. Apache httpd below 2.4.55 has multiple published CVEs. Once a branch is end-of-life it receives no security patches, so every newly discovered vulnerability in it stays exploitable forever.</p>
+  <h4>Business impact</h4><p>Known vulnerabilities in the runtime can be exploited at leisure; attackers actively scan for these versions.</p>
+  <h4>Evidence</h4>
+  <ul class="evidence"><li>Apache 2.4.49 reported in response headers</li></ul>
+  <h4>How to fix it</h4><pre class="fix">Upgrade Apache to a currently supported release and put a patch cadence in place (monthly minimum, plus out-of-band for critical advisories). Test on staging first.</pre>
+  
+  <div class="foot">
+    <span><strong>Category:</strong> Outdated Software</span>
+    <span><strong>Effort:</strong> Involved (1-3 days)</span>
+    <span><strong>Location:</strong> http://127.0.0.1:8099</span>
+  </div>
+</article>
+<article class="finding high">
+  <header>
+    <span class="chip high">high</span>
+    <h3>13. Reflected XSS in parameter &#x27;name&#x27;</h3>
+  </header>
+  <div class="tags">CVSS ~6.1 &middot; CWE-79 &middot; A03:2021 Injection &middot; confidence: firm</div>
+
+  <h4>What we found</h4>
+  <p>User input supplied in &#x27;name&#x27; is written back into the HTML page without encoding. The probe string was returned with its angle brackets intact, which means an attacker can inject any HTML tag - including &lt;script&gt; - and it will execute in the victim&#x27;s browser.</p>
+  <h4>Business impact</h4><p>Session theft, credential phishing rendered inside your own page, silent actions on behalf of the user, and malware delivery. Chained with a missing HttpOnly flag this is immediate account takeover.</p>
+  <h4>Evidence</h4>
+  <ul class="evidence"><li>GET http://127.0.0.1:8099/render?name=vswfr6d8f0%3Cvswfr6d8f0%3E</li><li>Payload fragment reflected verbatim: &lt;vswfr6d8f0&gt;</li><li>Response length: 54 bytes</li></ul>
+  <h4>How to fix it</h4><pre class="fix">Context-aware output encoding on every sink:
+- HTML body: encode &amp; &lt; &gt; &quot; &#x27;
+- attributes: quote and encode
+- JavaScript/URL contexts: use the framework&#x27;s escaper
+Also validate input against an allow-list and add a strict CSP as defence in depth.</pre>
+  
+  <div class="foot">
+    <span><strong>Category:</strong> Injection</span>
+    <span><strong>Effort:</strong> Moderate (half a day)</span>
+    <span><strong>Location:</strong> http://127.0.0.1:8099/render?name=guest</span>
+  </div>
+</article>
+<article class="finding high">
+  <header>
+    <span class="chip high">high</span>
+    <h3>14. Reflected XSS in parameter &#x27;q&#x27;</h3>
+  </header>
+  <div class="tags">CVSS ~6.1 &middot; CWE-79 &middot; A03:2021 Injection &middot; confidence: firm</div>
+
+  <h4>What we found</h4>
+  <p>User input supplied in &#x27;q&#x27; is written back into the HTML page without encoding. The probe string was returned with its angle brackets intact, which means an attacker can inject any HTML tag - including &lt;script&gt; - and it will execute in the victim&#x27;s browser.</p>
+  <h4>Business impact</h4><p>Session theft, credential phishing rendered inside your own page, silent actions on behalf of the user, and malware delivery. Chained with a missing HttpOnly flag this is immediate account takeover.</p>
+  <h4>Evidence</h4>
+  <ul class="evidence"><li>GET http://127.0.0.1:8099/search?q=vs5shc8lmo%3Cvs5shc8lmo%3E</li><li>Payload fragment reflected verbatim: &lt;vs5shc8lmo&gt;</li><li>Response length: 65 bytes</li></ul>
+  <h4>How to fix it</h4><pre class="fix">Context-aware output encoding on every sink:
+- HTML body: encode &amp; &lt; &gt; &quot; &#x27;
+- attributes: quote and encode
+- JavaScript/URL contexts: use the framework&#x27;s escaper
+Also validate input against an allow-list and add a strict CSP as defence in depth.</pre>
+  
+  <div class="foot">
+    <span><strong>Category:</strong> Injection</span>
+    <span><strong>Effort:</strong> Moderate (half a day)</span>
+    <span><strong>Location:</strong> http://127.0.0.1:8099/search</span>
+  </div>
+</article>
+<article class="finding medium">
+  <header>
+    <span class="chip medium">medium</span>
+    <h3>15. Cookies without SameSite attribute: PHPSESSID</h3>
+  </header>
+  <div class="tags">CVSS ~6.5 &middot; CWE-1275 &middot; A01:2021 Broken Access Control &middot; confidence: certain</div>
+
+  <h4>What we found</h4>
+  <p>With no SameSite attribute, browsers fall back to their default behaviour and the cookie is attached to cross-site requests. That is exactly what a CSRF attack needs.</p>
+  <h4>Business impact</h4><p>State-changing actions (password change, transfer, delete) can be triggered from an attacker&#x27;s page while the victim is logged in.</p>
+  <h4>Evidence</h4>
+  <ul class="evidence"><li>PHPSESSID: path</li></ul>
+  <h4>How to fix it</h4><pre class="fix">Add SameSite=Lax to normal session cookies; use SameSite=Strict for admin or high-value actions. Pair with anti-CSRF tokens.</pre>
+  
+  <div class="foot">
+    <span><strong>Category:</strong> Session Management</span>
+    <span><strong>Effort:</strong> Quick fix (under 1 hour)</span>
+    <span><strong>Location:</strong> http://127.0.0.1:8099</span>
+  </div>
+</article>
+<article class="finding medium">
+  <header>
+    <span class="chip medium">medium</span>
+    <h3>16. Directory listing is enabled</h3>
+  </header>
+  <div class="tags">CVSS ~5.3 &middot; CWE-548 &middot; A05:2021 Security Misconfiguration &middot; confidence: certain</div>
+
+  <h4>What we found</h4>
+  <p>The web server returns an auto-generated file index for http://127.0.0.1:8099/uploads/. Visitors can browse the contents of these folders directly, including files that were never meant to be linked.</p>
+  <h4>Business impact</h4><p>Disclosure of uploaded documents, backups, temporary files and sometimes personal data belonging to other users.</p>
+  <h4>Evidence</h4>
+  <ul class="evidence"><li>GET http://127.0.0.1:8099/uploads/ -&gt; 200 Index of ...</li></ul>
+  <h4>How to fix it</h4><pre class="fix">Disable autoindex:
+nginx: autoindex off;
+Apache: Options -Indexes
+and move non-public files outside the web root.</pre>
+  
+  <div class="foot">
+    <span><strong>Category:</strong> Misconfiguration</span>
+    <span><strong>Effort:</strong> Quick fix (under 1 hour)</span>
+    <span><strong>Location:</strong> http://127.0.0.1:8099/uploads/</span>
+  </div>
+</article>
+<article class="finding medium">
+  <header>
+    <span class="chip medium">medium</span>
+    <h3>17. HTTP TRACE method is enabled</h3>
+  </header>
+  <div class="tags">CVSS ~5.3 &middot; CWE-749 &middot; A05:2021 Security Misconfiguration &middot; confidence: certain</div>
+
+  <h4>What we found</h4>
+  <p>The server answers TRACE by echoing the full request back, including headers. Combined with a scripting flaw this enables Cross-Site Tracing (XST), which can read HttpOnly cookies.</p>
+  <h4>Business impact</h4><p>Bypasses the HttpOnly protection on session cookies in some browsers.</p>
+  <h4>Evidence</h4>
+  <ul class="evidence"><li>TRACE http://127.0.0.1:8099 -&gt; HTTP 200</li></ul>
+  <h4>How to fix it</h4><pre class="fix">Disable TRACE at the web server:
+Apache: TraceEnable Off
+nginx: if ($request_method = TRACE) { return 405; }</pre>
+  
+  <div class="foot">
+    <span><strong>Category:</strong> Misconfiguration</span>
+    <span><strong>Effort:</strong> Quick fix (under 1 hour)</span>
+    <span><strong>Location:</strong> http://127.0.0.1:8099</span>
+  </div>
+</article>
+<article class="finding medium">
+  <header>
+    <span class="chip medium">medium</span>
+    <h3>18. Open redirect via parameter &#x27;url&#x27;</h3>
+  </header>
+  <div class="tags">CVSS ~6.1 &middot; CWE-601 &middot; A01:2021 Broken Access Control &middot; confidence: certain</div>
+
+  <h4>What we found</h4>
+  <p>The &#x27;url&#x27; parameter controls where the user is sent, and it accepts any external host. The application will happily redirect visitors to an attacker-controlled site while the link still starts with your domain.</p>
+  <h4>Business impact</h4><p>Highly effective phishing: &#x27;https://yourdomain/login?next=evil.com&#x27; looks trustworthy, and is also used to steal OAuth tokens and bypass allow-lists.</p>
+  <h4>Evidence</h4>
+  <ul class="evidence"><li>GET http://127.0.0.1:8099/redirect?url=https%3A%2F%2Fvulnscope-canary.invalid%2Fpoc</li><li>Location: https://vulnscope-canary.invalid/poc</li></ul>
+  <h4>How to fix it</h4><pre class="fix">Accept only relative paths, or validate against an allow-list of permitted hosts before redirecting. Reject values containing &#x27;://&#x27; and &#x27;//&#x27;.</pre>
+  
+  <div class="foot">
+    <span><strong>Category:</strong> Injection</span>
+    <span><strong>Effort:</strong> Quick fix (under 1 hour)</span>
+    <span><strong>Location:</strong> http://127.0.0.1:8099/redirect?url=%2Fhome</span>
+  </div>
+</article>
+<article class="finding medium">
+  <header>
+    <span class="chip medium">medium</span>
+    <h3>19. Outdated jQuery 1.12.4 (known XSS issues)</h3>
+  </header>
+  <div class="tags">CVSS ~6.1 &middot; CWE-1104 &middot; A06:2021 Vulnerable and Outdated Components &middot; confidence: certain</div>
+
+  <h4>What we found</h4>
+  <p>jQuery 1.12.4 predates fixes for CVE-2020-11022 / CVE-2020-11023 (XSS via htmlPrefilter) and, below 3.4.0, CVE-2019-11358 (prototype pollution in jQuery.extend).</p>
+  <h4>Business impact</h4><p>Untrusted HTML passed to .html()/.append() can execute script, re-enabling XSS even where the application escapes correctly.</p>
+  <h4>Evidence</h4>
+  <ul class="evidence"><li>jQuery 1.12.4 referenced in page source</li></ul>
+  <h4>How to fix it</h4><pre class="fix">Upgrade to jQuery 3.7.x and audit any .html() call that receives user data.</pre>
+  
+  <div class="foot">
+    <span><strong>Category:</strong> Outdated Software</span>
+    <span><strong>Effort:</strong> Quick fix (under 1 hour)</span>
+    <span><strong>Location:</strong> http://127.0.0.1:8099</span>
+  </div>
+</article>
+<article class="finding medium">
+  <header>
+    <span class="chip medium">medium</span>
+    <h3>20. Page can be framed by any site (clickjacking)</h3>
+  </header>
+  <div class="tags">CVSS ~4.3 &middot; CWE-1021 &middot; A05:2021 Security Misconfiguration &middot; confidence: certain</div>
+
+  <h4>What we found</h4>
+  <p>Neither X-Frame-Options nor CSP frame-ancestors is set, so the site can be embedded in an invisible iframe on an attacker&#x27;s page. Users can be tricked into clicking &#x27;Delete account&#x27;, &#x27;Pay&#x27; or &#x27;Grant access&#x27; while believing they are on a harmless page.</p>
+  <h4>Business impact</h4><p>Account actions and payment flows can be hijacked through UI redressing.</p>
+  <h4>Evidence</h4>
+  <ul class="evidence"><li>X-Frame-Options: (absent)</li><li>CSP frame-ancestors: (absent)</li></ul>
+  <h4>How to fix it</h4><pre class="fix">Add Content-Security-Policy: frame-ancestors &#x27;self&#x27; (preferred) and X-Frame-Options: SAMEORIGIN for older browsers.</pre>
+  
+  <div class="foot">
+    <span><strong>Category:</strong> Security Headers</span>
+    <span><strong>Effort:</strong> Quick fix (under 1 hour)</span>
+    <span><strong>Location:</strong> http://127.0.0.1:8099/</span>
+  </div>
+</article>
+<article class="finding medium">
+  <header>
+    <span class="chip medium">medium</span>
+    <h3>21. Session cookies readable from JavaScript: PHPSESSID</h3>
+  </header>
+  <div class="tags">CVSS ~6.5 &middot; CWE-1004 &middot; A05:2021 Security Misconfiguration &middot; confidence: certain</div>
+
+  <h4>What we found</h4>
+  <p>Without HttpOnly, any JavaScript running on the page - including code injected through an XSS flaw or a compromised third-party script - can read the session cookie with document.cookie.</p>
+  <h4>Business impact</h4><p>A single XSS anywhere on the site escalates from &#x27;script execution&#x27; to full, persistent account takeover.</p>
+  <h4>Evidence</h4>
+  <ul class="evidence"><li>PHPSESSID: path</li></ul>
+  <h4>How to fix it</h4><pre class="fix">Add HttpOnly to all session and authentication cookies.</pre>
+  
+  <div class="foot">
+    <span><strong>Category:</strong> Session Management</span>
+    <span><strong>Effort:</strong> Quick fix (under 1 hour)</span>
+    <span><strong>Location:</strong> http://127.0.0.1:8099</span>
+  </div>
+</article>
+<article class="finding medium">
+  <header>
+    <span class="chip medium">medium</span>
+    <h3>22. Dangerous HTTP methods advertised: PUT</h3>
+  </header>
+  <div class="tags">CVSS ~5.3 &middot; CWE-749 &middot; A05:2021 Security Misconfiguration &middot; confidence: tentative</div>
+
+  <h4>What we found</h4>
+  <p>The server advertises write-capable methods on a public endpoint. If the application layer does not authorise them, an attacker can upload or delete content directly.</p>
+  <h4>Business impact</h4><p>Potential unauthorised file upload, overwrite or deletion.</p>
+  <h4>Evidence</h4>
+  <ul class="evidence"><li>Allow: GET, POST, OPTIONS, TRACE, PUT</li></ul>
+  <h4>How to fix it</h4><pre class="fix">Restrict allowed methods to GET/POST/HEAD (plus OPTIONS if needed) and return 405 for the rest. Verify authorisation on every verb.</pre>
+  
+  <div class="foot">
+    <span><strong>Category:</strong> Misconfiguration</span>
+    <span><strong>Effort:</strong> Moderate (half a day)</span>
+    <span><strong>Location:</strong> http://127.0.0.1:8099</span>
+  </div>
+</article>
+<article class="finding low">
+  <header>
+    <span class="chip low">low</span>
+    <h3>23. External links open with target=_blank but no rel=noopener</h3>
+  </header>
+  <div class="tags">CVSS ~3.1 &middot; CWE-1022 &middot; A05:2021 Security Misconfiguration &middot; confidence: certain</div>
+
+  <h4>What we found</h4>
+  <p>A link opened in a new tab keeps a reference to your page through window.opener. The destination site can use it to redirect the original tab to a phishing page.</p>
+  <h4>Business impact</h4><p>Users who return to the original tab land on an attacker-controlled clone.</p>
+  <h4>Evidence</h4>
+  <ul class="evidence"><li>href=https://example.com</li></ul>
+  <h4>How to fix it</h4><pre class="fix">Add rel=&quot;noopener noreferrer&quot; to every target=&quot;_blank&quot; link, or set it globally in the framework.</pre>
+  
+  <div class="foot">
+    <span><strong>Category:</strong> Client-Side</span>
+    <span><strong>Effort:</strong> Quick fix (under 1 hour)</span>
+    <span><strong>Location:</strong> http://127.0.0.1:8099/</span>
+  </div>
+</article>
+<article class="finding low">
+  <header>
+    <span class="chip low">low</span>
+    <h3>24. HTML comments reveal internal information</h3>
+  </header>
+  <div class="tags">CVSS ~3.1 &middot; CWE-615 &middot; A05:2021 Security Misconfiguration &middot; confidence: certain</div>
+
+  <h4>What we found</h4>
+  <p>Developer comments are shipped to production. They often contain credentials, internal hostnames, TODO notes about unpatched areas, or hints about hidden admin paths.</p>
+  <h4>Business impact</h4><p>Free reconnaissance for an attacker, sometimes including direct credentials.</p>
+  <h4>Evidence</h4>
+  <ul class="evidence"><li>&lt;!-- TODO: remove test admin:admin before launch --&gt;</li></ul>
+  <h4>How to fix it</h4><pre class="fix">Strip comments in the build step (HTML minification does this automatically) and review what is deployed.</pre>
+  
+  <div class="foot">
+    <span><strong>Category:</strong> Information Disclosure</span>
+    <span><strong>Effort:</strong> Quick fix (under 1 hour)</span>
+    <span><strong>Location:</strong> http://127.0.0.1:8099/</span>
+  </div>
+</article>
+<article class="finding low">
+  <header>
+    <span class="chip low">low</span>
+    <h3>25. Permissions-Policy header is missing</h3>
+  </header>
+  <div class="tags">CVSS ~3.1 &middot; CWE-693 &middot; A05:2021 Security Misconfiguration &middot; confidence: certain</div>
+
+  <h4>What we found</h4>
+  <p>Powerful browser features (camera, microphone, geolocation, clipboard) stay available to any embedded third-party frame unless explicitly disabled.</p>
+  <h4>Business impact</h4><p>Raises the likelihood and blast radius of any injection flaw on the site; an attacker who lands one script gets a durable foothold in users&#x27; browsers.</p>
+  <h4>Evidence</h4>
+  <ul class="evidence"><li>GET http://127.0.0.1:8099/</li><li>Response headers did not include: permissions-policy</li></ul>
+  <h4>How to fix it</h4><pre class="fix">Add a deny-by-default policy, e.g.:
+Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()</pre>
+  
+  <div class="foot">
+    <span><strong>Category:</strong> Security Headers</span>
+    <span><strong>Effort:</strong> Quick fix (under 1 hour)</span>
+    <span><strong>Location:</strong> http://127.0.0.1:8099/</span>
+  </div>
+</article>
+<article class="finding low">
+  <header>
+    <span class="chip low">low</span>
+    <h3>26. Referrer-Policy header is missing</h3>
+  </header>
+  <div class="tags">CVSS ~3.1 &middot; CWE-200 &middot; A01:2021 Broken Access Control &middot; confidence: certain</div>
+
+  <h4>What we found</h4>
+  <p>Full URLs - including tokens and internal identifiers - leak to third parties through the Referer header when users click external links.</p>
+  <h4>Business impact</h4><p>Raises the likelihood and blast radius of any injection flaw on the site; an attacker who lands one script gets a durable foothold in users&#x27; browsers.</p>
+  <h4>Evidence</h4>
+  <ul class="evidence"><li>GET http://127.0.0.1:8099/</li><li>Response headers did not include: referrer-policy</li></ul>
+  <h4>How to fix it</h4><pre class="fix">Add:
+Referrer-Policy: strict-origin-when-cross-origin</pre>
+  
+  <div class="foot">
+    <span><strong>Category:</strong> Security Headers</span>
+    <span><strong>Effort:</strong> Quick fix (under 1 hour)</span>
+    <span><strong>Location:</strong> http://127.0.0.1:8099/</span>
+  </div>
+</article>
+<article class="finding low">
+  <header>
+    <span class="chip low">low</span>
+    <h3>27. Technology versions disclosed in response headers</h3>
+  </header>
+  <div class="tags">CVSS ~3.7 &middot; CWE-200 &middot; A05:2021 Security Misconfiguration &middot; confidence: certain</div>
+
+  <h4>What we found</h4>
+  <p>Response headers advertise the exact server and framework versions. An attacker can match these against public CVE databases and pick exploits that are known to work, skipping the reconnaissance phase entirely.</p>
+  <h4>Business impact</h4><p>Faster, more reliable targeting of version-specific vulnerabilities.</p>
+  <h4>Evidence</h4>
+  <ul class="evidence"><li>Server: Apache/2.4.49 (Unix)</li></ul>
+  <h4>How to fix it</h4><pre class="fix">Suppress or genericise version strings: nginx `server_tokens off;`, Apache `ServerTokens Prod` / `ServerSignature Off`, PHP `expose_php = Off`, and remove X-Powered-By at the reverse proxy.</pre>
+  
+  <div class="foot">
+    <span><strong>Category:</strong> Information Disclosure</span>
+    <span><strong>Effort:</strong> Quick fix (under 1 hour)</span>
+    <span><strong>Location:</strong> http://127.0.0.1:8099/</span>
+  </div>
+</article>
+<article class="finding low">
+  <header>
+    <span class="chip low">low</span>
+    <h3>28. Third-party scripts loaded without Subresource Integrity</h3>
+  </header>
+  <div class="tags">CVSS ~3.7 &middot; CWE-353 &middot; A08:2021 Software and Data Integrity Failures &middot; confidence: certain</div>
+
+  <h4>What we found</h4>
+  <p>1 script tag(s) load code from an external host without an integrity hash. If that CDN or vendor is compromised, the modified script runs with full access to your users&#x27; sessions.</p>
+  <h4>Business impact</h4><p>One compromised third-party host becomes a compromise of your site.</p>
+  <h4>Evidence</h4>
+  <ul class="evidence"><li>External scripts: 1</li><li>Without integrity: 1</li></ul>
+  <h4>How to fix it</h4><pre class="fix">Add integrity and crossorigin attributes:
+&lt;script src=&quot;https://cdn.example/lib.js&quot; integrity=&quot;sha384-...&quot; crossorigin=&quot;anonymous&quot;&gt;&lt;/script&gt;</pre>
+  
+  <div class="foot">
+    <span><strong>Category:</strong> Supply Chain</span>
+    <span><strong>Effort:</strong> Quick fix (under 1 hour)</span>
+    <span><strong>Location:</strong> http://127.0.0.1:8099/</span>
+  </div>
+</article>
+<article class="finding low">
+  <header>
+    <span class="chip low">low</span>
+    <h3>29. X-Content-Type-Options header is missing</h3>
+  </header>
+  <div class="tags">CVSS ~3.1 &middot; CWE-693 &middot; A05:2021 Security Misconfiguration &middot; confidence: certain</div>
+
+  <h4>What we found</h4>
+  <p>Browsers may &#x27;sniff&#x27; a response into a different content type than declared, which can turn an uploaded file or user-controlled endpoint into executable script (MIME confusion attacks).</p>
+  <h4>Business impact</h4><p>Raises the likelihood and blast radius of any injection flaw on the site; an attacker who lands one script gets a durable foothold in users&#x27; browsers.</p>
+  <h4>Evidence</h4>
+  <ul class="evidence"><li>GET http://127.0.0.1:8099/</li><li>Response headers did not include: x-content-type-options</li></ul>
+  <h4>How to fix it</h4><pre class="fix">Add to every response:
+X-Content-Type-Options: nosniff</pre>
+  
+  <div class="foot">
+    <span><strong>Category:</strong> Security Headers</span>
+    <span><strong>Effort:</strong> Quick fix (under 1 hour)</span>
+    <span><strong>Location:</strong> http://127.0.0.1:8099/</span>
+  </div>
+</article>
+<article class="finding info">
+  <header>
+    <span class="chip info">info</span>
+    <h3>30. Cross-Origin-Opener-Policy (COOP) header is missing</h3>
+  </header>
+  <div class="tags">CVSS ~3.1 &middot; CWE-693 &middot; A05:2021 Security Misconfiguration &middot; confidence: certain</div>
+
+  <h4>What we found</h4>
+  <p>COOP isolates your browsing context from cross-origin windows, closing cross-window attacks such as Spectre-style leaks and tabnabbing chains.</p>
+  <h4>Business impact</h4><p>Raises the likelihood and blast radius of any injection flaw on the site; an attacker who lands one script gets a durable foothold in users&#x27; browsers.</p>
+  <h4>Evidence</h4>
+  <ul class="evidence"><li>GET http://127.0.0.1:8099/</li><li>Response headers did not include: cross-origin-opener-policy</li></ul>
+  <h4>How to fix it</h4><pre class="fix">Add:
+Cross-Origin-Opener-Policy: same-origin</pre>
+  
+  <div class="foot">
+    <span><strong>Category:</strong> Security Headers</span>
+    <span><strong>Effort:</strong> Quick fix (under 1 hour)</span>
+    <span><strong>Location:</strong> http://127.0.0.1:8099/</span>
+  </div>
+</article>
+<article class="finding info">
+  <header>
+    <span class="chip info">info</span>
+    <h3>31. No web application firewall detected</h3>
+  </header>
+  <div class="tags">CWE-693 &middot; A05:2021 Security Misconfiguration &middot; confidence: certain</div>
+
+  <h4>What we found</h4>
+  <p>No WAF or CDN filtering layer was identified in front of the application. Nothing sits between the internet and the code to block obvious attack patterns.</p>
+  <h4>Business impact</h4><p>Every malicious request reaches the application directly; there is no virtual patching option when a CVE drops.</p>
+  <h4>Evidence</h4>
+  <ul class="evidence"><li>No WAF signature headers observed</li></ul>
+  <h4>How to fix it</h4><pre class="fix">Consider a WAF/CDN (Cloudflare, AWS WAF, or a managed service). Treat it as defence in depth only - it never replaces fixing the underlying code.</pre>
+  
+  <div class="foot">
+    <span><strong>Category:</strong> Defence in Depth</span>
+    <span><strong>Effort:</strong> Moderate (half a day)</span>
+    <span><strong>Location:</strong> http://127.0.0.1:8099</span>
+  </div>
+</article>
+<article class="finding info">
+  <header>
+    <span class="chip info">info</span>
+    <h3>32. Password field allows browser autocomplete</h3>
+  </header>
+  <div class="tags">CWE-522 &middot; A07:2021 Identification and Authentication Failures &middot; confidence: certain</div>
+
+  <h4>What we found</h4>
+  <p>The login form does not set autocomplete=&quot;off&quot; or a credential-manager hint. On shared devices this can leave credentials stored in the browser.</p>
+  <h4>Business impact</h4><p>Minor credential exposure on shared computers.</p>
+  <h4>Evidence</h4>
+  <ul class="evidence"><li>Form action: http://127.0.0.1:8099/login</li></ul>
+  <h4>How to fix it</h4><pre class="fix">Use autocomplete=&quot;current-password&quot; on login and &quot;new-password&quot; on registration so password managers behave correctly, and avoid autocomplete=&quot;off&quot; on login (it breaks managers).</pre>
+  
+  <div class="foot">
+    <span><strong>Category:</strong> Client-Side</span>
+    <span><strong>Effort:</strong> Quick fix (under 1 hour)</span>
+    <span><strong>Location:</strong> http://127.0.0.1:8099/</span>
+  </div>
+</article>
+<article class="finding info">
+  <header>
+    <span class="chip info">info</span>
+    <h3>33. robots.txt points at sensitive paths</h3>
+  </header>
+  <div class="tags">CWE-200 &middot; A05:2021 Security Misconfiguration &middot; confidence: certain</div>
+
+  <h4>What we found</h4>
+  <p>robots.txt lists directories that look sensitive. Bots ignore this file, and it is often the first thing an attacker reads - it works as a signpost rather than a control.</p>
+  <h4>Business impact</h4><p>Guides attackers to admin, backup or internal paths.</p>
+  <h4>Evidence</h4>
+  <ul class="evidence"><li>Disallow entries: /admin/, /backup/, /internal-api/</li></ul>
+  <h4>How to fix it</h4><pre class="fix">Do not rely on robots.txt for access control. Protect these paths with real authentication and remove the hints.</pre>
+  
+  <div class="foot">
+    <span><strong>Category:</strong> Information Disclosure</span>
+    <span><strong>Effort:</strong> Quick fix (under 1 hour)</span>
+    <span><strong>Location:</strong> http://127.0.0.1:8099/robots.txt</span>
+  </div>
+</article>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="num">05</span><h2>Remediation roadmap</h2></div>
+    <div class="card"><h3 style="font-size:15px;margin-bottom:4px">Phase 1 &mdash; Immediate (this week)</h3><p class="note" style="margin-bottom:10px">High-impact items that are cheap to fix. These alone will move the score the most.</p><ul style="margin:0;padding-left:18px"><li><span class="chip critical">critical</span> Apache 2.4.49 is vulnerable to CVE-2021-41773 (path traversal / RCE)</li><li><span class="chip critical">critical</span> CORS reflects any origin with credentials enabled</li><li><span class="chip critical">critical</span> Database dump exposed</li><li><span class="chip critical">critical</span> Environment file with secrets exposed</li><li><span class="chip critical">critical</span> Exposed Git repository configuration</li><li><span class="chip high">high</span> Content-Security-Policy header is missing</li><li><span class="chip high">high</span> Cookies missing the Secure flag: PHPSESSID</li></ul></div><div class="card"><h3 style="font-size:15px;margin-bottom:4px">Phase 2 &mdash; Short term (2&ndash;4 weeks)</h3><p class="note" style="margin-bottom:10px">Structural fixes that need development time or a change in how the app is built.</p><ul style="margin:0;padding-left:18px"><li><span class="chip critical">critical</span> Path traversal / local file inclusion in &#x27;file&#x27;</li><li><span class="chip critical">critical</span> SQL injection in parameter &#x27;q&#x27; (MySQL)</li><li><span class="chip critical">critical</span> Server-side template injection in &#x27;name&#x27;</li><li><span class="chip high">high</span> Could not establish a TLS connection on port 443</li><li><span class="chip high">high</span> End-of-life Apache 2.4.49 in production</li><li><span class="chip high">high</span> Reflected XSS in parameter &#x27;name&#x27;</li><li><span class="chip high">high</span> Reflected XSS in parameter &#x27;q&#x27;</li><li><span class="chip medium">medium</span> Dangerous HTTP methods advertised: PUT</li></ul></div><div class="card"><h3 style="font-size:15px;margin-bottom:4px">Phase 3 &mdash; Ongoing hardening</h3><p class="note" style="margin-bottom:10px">Lower-risk items and hygiene improvements to fold into the normal release cycle.</p><ul style="margin:0;padding-left:18px"><li><span class="chip low">low</span> External links open with target=_blank but no rel=noopener</li><li><span class="chip low">low</span> HTML comments reveal internal information</li><li><span class="chip low">low</span> Permissions-Policy header is missing</li><li><span class="chip low">low</span> Referrer-Policy header is missing</li><li><span class="chip low">low</span> Technology versions disclosed in response headers</li><li><span class="chip low">low</span> Third-party scripts loaded without Subresource Integrity</li><li><span class="chip low">low</span> X-Content-Type-Options header is missing</li><li><span class="chip info">info</span> Cross-Origin-Opener-Policy (COOP) header is missing</li><li><span class="chip info">info</span> No web application firewall detected</li><li><span class="chip info">info</span> Password field allows browser autocomplete</li><li><span class="chip info">info</span> robots.txt points at sensitive paths</li></ul></div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="num">06</span><h2>Compliance mapping</h2></div>
+    <div class="card">
+      <p style="font-size:12.5px">Findings mapped to OWASP Top 10 (2021) categories, for use in
+      audits and customer security questionnaires.</p>
+      <table style='margin-top:10px'><thead><tr><th>Worst severity</th><th>OWASP category</th><th>Findings</th></tr></thead><tbody><tr><td><span class="chip critical">critical</span></td><td><strong>A06:2021 Vulnerable and Outdated Components</strong></td><td class='num'>3</td></tr><tr><td><span class="chip critical">critical</span></td><td><strong>A01:2021 Broken Access Control</strong></td><td class='num'>6</td></tr><tr><td><span class="chip critical">critical</span></td><td><strong>A02:2021 Cryptographic Failures</strong></td><td class='num'>2</td></tr><tr><td><span class="chip critical">critical</span></td><td><strong>A05:2021 Security Misconfiguration</strong></td><td class='num'>16</td></tr><tr><td><span class="chip critical">critical</span></td><td><strong>A03:2021 Injection</strong></td><td class='num'>4</td></tr><tr><td><span class="chip low">low</span></td><td><strong>A08:2021 Software and Data Integrity Failures</strong></td><td class='num'>1</td></tr><tr><td><span class="chip info">info</span></td><td><strong>A07:2021 Identification and Authentication Failures</strong></td><td class='num'>1</td></tr></tbody></table>
+    </div>
+  </section>
+
+  
+<section class="page-break">
+  <div class="sec-head"><span class="num">07</span><h2>Recommended engagement</h2></div>
+  <div class="card">
+    <p>This report covers <strong>33 findings</strong>, of which <strong>7</strong> are
+    high-impact and quick to fix. The following packages are structured around that workload.
+    Prices are to be agreed; the scope column is derived from the findings above.</p>
+    <table style="margin-top:14px">
+      <thead><tr><th>Package</th><th>Scope</th><th>Indicative price</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Essential</strong></td>
+            <td>Fix all Critical and High findings (14 items), re-test,
+                written verification report</td>
+            <td class="num">___________</td></tr>
+        <tr><td><strong>Complete</strong></td>
+            <td>Everything in Essential plus all Medium findings (8 items), security
+                header rollout, dependency upgrades</td>
+            <td class="num">___________</td></tr>
+        <tr><td><strong>Retainer</strong></td>
+            <td>Complete remediation plus monthly re-scan, patch monitoring and a quarterly
+                review call</td>
+            <td class="num">___________</td></tr>
+      </tbody>
+    </table>
+    <h4 style="margin-top:20px">Deliverables</h4>
+    <ul>
+      <li>Fixed code / configuration, deployed and verified on your server</li>
+      <li>A follow-up scan proving each finding is closed (before/after score comparison)</li>
+      <li>Short handover note so your team can maintain the fixes</li>
+    </ul>
+    <h4>Assumptions</h4>
+    <ul>
+      <li>Work is performed on a staging copy where possible, then promoted to production</li>
+      <li>You provide access to the codebase or server configuration for the fixes</li>
+      <li>Third-party services (hosting, DNS, payment gateway) are configured by their owners</li>
+    </ul>
+  </div>
+</section>
+  
+<section class="page-break">
+  <div class="sec-head"><span class="num">08</span><h2>Appendix</h2></div>
+  <div class="card">
+    <h3 style="font-size:15px;margin-bottom:10px">Infrastructure observations</h3>
+    <table><tbody><tr><td><strong>Resolved IPs</strong></td><td>127.0.0.1</td></tr><tr><td><strong>Allowed HTTP methods</strong></td><td>GET, POST, OPTIONS, TRACE, PUT</td></tr><tr><td><strong>TLS</strong></td><td> &middot;  &middot; expires  (None days)</td></tr></tbody></table>
+  </div>
+  <div class="card">
+    <h3 style="font-size:15px;margin-bottom:10px">Response headers observed</h3>
+    <table><tbody><tr><td><code>Server</code></td><td>Apache/2.4.49 (Unix)</td></tr><tr><td><code>Date</code></td><td>Mon, 16 Nov 2026 04:21:36 GMT</td></tr><tr><td><code>Content-Type</code></td><td>text/html; charset=utf-8</td></tr><tr><td><code>Content-Length</code></td><td>747</td></tr><tr><td><code>Set-Cookie</code></td><td>PHPSESSID=abc123def456; Path=/</td></tr></tbody></table>
+  </div>
+  <div class="card">
+    <h3 style="font-size:15px;margin-bottom:10px">Pages crawled (7)</h3>
+    <ul style="margin:0;padding-left:18px;font-size:12px"><li><code>http://127.0.0.1:8099/</code></li><li><code>http://127.0.0.1:8099/home</code></li><li><code>http://127.0.0.1:8099/download?file=report.txt</code></li><li><code>http://127.0.0.1:8099/render?name=guest</code></li><li><code>http://127.0.0.1:8099/admin/</code></li><li><code>http://127.0.0.1:8099/uploads/</code></li><li><code>http://127.0.0.1:8099/search</code></li></ul>
+  </div>
+</section>
+  
+<section>
+  <div class="sec-head"><span class="num">09</span><h2>Methodology, scope &amp; limitations</h2></div>
+  <div class="card two-col">
+    <div>
+      <h3 style="font-size:14px;margin-bottom:8px">What was tested</h3>
+      <ul style="margin:0;padding-left:18px;font-size:12.5px">
+        <li>Transport encryption, certificate validity and protocol support</li>
+        <li>HTTP security headers, cookie attributes and browser hardening</li>
+        <li>Server configuration: HTTP methods, CORS policy, error handling, host header trust</li>
+        <li>Exposure of backups, configuration files, repositories and admin panels</li>
+        <li>Technology fingerprinting and outdated component detection</li>
+        <li>Client-side content: mixed content, leaked secrets, third-party script integrity</li>
+        <li>DNS and email authentication: SPF, DMARC, DKIM, CAA, DNSSEC</li>
+        <li>Non-destructive injection probes on discovered parameters
+            (reflected XSS, SQL error signatures, open redirect, path traversal, template injection, CRLF)</li>
+      </ul>
+    </div>
+    <div>
+      <h3 style="font-size:14px;margin-bottom:8px">What this scan does not replace</h3>
+      <ul style="margin:0;padding-left:18px;font-size:12.5px">
+        <li>Authenticated testing of logged-in roles and privilege boundaries</li>
+        <li>Business-logic abuse (price manipulation, workflow bypass, race conditions)</li>
+        <li>Mobile application and API client testing</li>
+        <li>Source-code review and infrastructure / network penetration testing</li>
+        <li>Social engineering and physical access</li>
+      </ul>
+      <p class="note" style="margin-top:10px">
+        Findings are based on external observation only. Absence of a finding does not prove
+        absence of a vulnerability.
+      </p>
+    </div>
+  </div>
+  <div class="card">
+    <h3 style="font-size:14px;margin-bottom:8px">How severity is assigned</h3>
+    <table>
+      <tbody>
+        <tr><td style="width:110px"><span class="chip critical">critical</span></td>
+            <td>Direct path to full compromise or mass data disclosure. Exploitable by an
+                unskilled attacker, often without authentication. Fix immediately.</td></tr>
+        <tr><td><span class="chip high">high</span></td>
+            <td>Serious weakness that leads to account or data compromise, or a clear compliance
+                failure. Fix within days.</td></tr>
+        <tr><td><span class="chip medium">medium</span></td>
+            <td>Weakens defences or requires chaining with another flaw. Fix within weeks.</td></tr>
+        <tr><td><span class="chip low">low</span></td>
+            <td>Hardening gap with limited direct impact. Fix on a normal maintenance cycle.</td></tr>
+        <tr><td><span class="chip info">info</span></td>
+            <td>Observation, best-practice note, or context for the other findings.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="card">
+    <h3 style="font-size:14px;margin-bottom:8px">Authorisation &amp; conduct</h3>
+    <p style="font-size:12.5px">
+      Testing was carried out with the authorisation of the site owner. All probes were
+      non-destructive: no data was created, modified or deleted, no authentication was bypassed,
+      and no denial-of-service or brute-force activity was performed. Request rate was limited
+      throughout. Scan ID <strong>VS-4AC52381</strong>, performed
+      16 November 2026, 10:21 in
+      6s over 125 requests.
+    </p>
+  </div>
+</section>
+
+  <footer class="rep">
+    <span>VS-4AC52381 &middot; VulnScope automated assessment</span>
+    <span>External, non-intrusive testing &middot; 16 November 2026</span>
+  </footer>
+</div>
+</body>
+</html>
