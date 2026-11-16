@@ -204,11 +204,19 @@ def compare_files(baseline_path: str, current_path: str) -> DiffResult:
 
 
 # ---------------------------------------------------------------- helpers
-def _when(iso: str) -> str:
+def _when(val: Any) -> str:
+    if not val:
+        return "unknown"
+    if isinstance(val, (int, float)):
+        try:
+            return _dt.datetime.fromtimestamp(val).strftime("%d %B %Y, %H:%M")
+        except Exception:
+            return str(val)
+    val_str = str(val)
     try:
-        return _dt.datetime.fromisoformat(iso).strftime("%d %B %Y, %H:%M")
+        return _dt.datetime.fromisoformat(val_str).strftime("%d %B %Y, %H:%M")
     except (TypeError, ValueError):
-        return iso or "unknown"
+        return val_str
 
 
 def _delta(before: int, after: int) -> str:
@@ -507,10 +515,12 @@ def render_html(diff: DiffResult) -> str:
 # ---------------------------------------------------------------- writing
 def write_reports(diff: DiffResult, out_dir: str,
                   formats: Tuple[str, ...] = ("html", "md", "json")) -> List[str]:
-    os.makedirs(out_dir, exist_ok=True)
-    stamp = _dt.datetime.now().strftime("%Y%m%d-%H%M%S")
-    safe_host = re.sub(r"[^a-zA-Z0-9.\-_]", "-", diff.host.lower())
-    base = os.path.join(out_dir, f"retest-{safe_host}-{stamp}")
+    domain_folder = re.sub(r'[^a-zA-Z0-9.\-_]', '_', diff.host.lower())
+    datetime_folder = _dt.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    target_dir = os.path.join(out_dir, domain_folder, datetime_folder)
+    os.makedirs(target_dir, exist_ok=True)
+
+    base = os.path.join(target_dir, "retest")
     written: List[str] = []
 
     if "html" in formats:
