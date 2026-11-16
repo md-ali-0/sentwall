@@ -697,12 +697,18 @@ function loadReportsList() {
   .then(r => r.json())
   .then(list => {
     const box = document.getElementById('reportsList');
-    if (!list.length) return;
+    if (!list.length) {
+      box.innerHTML = '<p style="color:var(--text-muted)">No reports generated yet.</p>';
+      return;
+    }
     box.innerHTML = list.map(item => `
       <div style="background:#0d1424; border:1px solid var(--card-border); padding:12px 16px; border-radius:6px; display:flex; justify-content:space-between; align-items:center;">
         <div>
-          <strong style="color:#fff; font-size:13px;">${item.name}</strong>
-          <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">Size: ${(item.size/1024).toFixed(1)} KB &bull; Modified: ${item.modified}</div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="background:rgba(16,185,129,0.12); color:var(--accent); font-weight:700; font-size:11px; padding:2px 6px; border-radius:4px;">${item.domain}</span>
+            <strong style="color:#fff; font-size:13px;">${item.file}</strong>
+          </div>
+          <div style="font-size:11.5px; color:var(--text-muted); margin-top:3px;">Path: ${item.name} &bull; ${(item.size/1024).toFixed(1)} KB &bull; ${item.modified}</div>
         </div>
         <a href="/reports/${item.name}" target="_blank" class="btn-secondary" style="text-decoration:none;">View / Download</a>
       </div>
@@ -828,23 +834,42 @@ class StudioHandler(BaseHTTPRequestHandler):
             reports_dir = "reports"
             items = []
             if os.path.exists(reports_dir):
-                for fname in sorted(os.listdir(reports_dir), reverse=True):
-                    fpath = os.path.join(reports_dir, fname)
-                    if os.path.isfile(fpath):
-                        items.append({
-                            "name": fname,
-                            "size": os.path.getsize(fpath),
-                            "modified": _dt.datetime.fromtimestamp(os.path.getmtime(fpath)).strftime("%Y-%m-%d %H:%M"),
-                        })
+                for root, dirs, files in os.walk(reports_dir):
+                    for file in files:
+                        if file.endswith((".html", ".pdf", ".json", ".md", ".sarif", ".csv")):
+                            fpath = os.path.join(root, file)
+                            rel_path = os.path.relpath(fpath, reports_dir).replace("\\", "/")
+                            parts = rel_path.split("/")
+                            domain_name = parts[0] if len(parts) > 1 else "root"
+                            datetime_name = parts[1] if len(parts) > 2 else ""
+                            items.append({
+                                "name": rel_path,
+                                "file": file,
+                                "domain": domain_name,
+                                "datetime": datetime_name,
+                                "size": os.path.getsize(fpath),
+                                "modified": _dt.datetime.fromtimestamp(os.path.getmtime(fpath)).strftime("%Y-%m-%d %H:%M"),
+                            })
+            items.sort(key=lambda x: x["modified"], reverse=True)
             self._send_json(items)
             return
 
-        # Download report file
+        # Download / View report file (supports nested domain/date folders)
         if path.startswith("/reports/"):
-            fname = os.path.basename(path)
-            fpath = os.path.join("reports", fname)
+            rel_path = urllib.parse.unquote(path[len("/reports/"):].lstrip("/"))
+            safe_rel = os.path.normpath(rel_path).replace("\\", "/")
+            if safe_rel.startswith("..") or "/../" in safe_rel:
+                self._send_json({"error": "Forbidden path"}, 403)
+                return
+            fpath = os.path.join("reports", safe_rel)
             if os.path.exists(fpath) and os.path.isfile(fpath):
-                ctype = "text/html" if fname.endswith(".html") else ("application/json" if fname.endswith(".json") else "application/octet-stream")
+                ctype = "text/html; charset=utf-8" if fpath.endswith(".html") else (
+                    "application/json; charset=utf-8" if fpath.endswith(".json") else (
+                        "application/pdf" if fpath.endswith(".pdf") else (
+                            "text/markdown; charset=utf-8" if fpath.endswith(".md") else "text/plain; charset=utf-8"
+                        )
+                    )
+                )
                 with open(fpath, "rb") as fh:
                     raw = fh.read()
                 self.send_response(200)

@@ -5,6 +5,7 @@ import datetime as _dt
 import html
 import json
 import os
+import re
 from typing import Dict, List
 
 from .models import EFFORT_LABEL, SEVERITY_COLOR, Finding, ScanResult, Severity, quick_wins
@@ -498,9 +499,12 @@ def write_reports(
     formats: List[str] = ("html", "json", "md", "sarif", "csv"),
     include_proposal: bool = False,
 ) -> List[str]:
-    os.makedirs(outdir, exist_ok=True)
-    stamp = _dt.datetime.fromtimestamp(result.started).strftime("%Y%m%d-%H%M%S")
-    base = os.path.join(outdir, f"vulnscope-{result.host.replace('.', '-')}-{stamp}")
+    domain_folder = re.sub(r'[^a-zA-Z0-9.\-_]', '_', result.host.lower())
+    datetime_folder = _dt.datetime.fromtimestamp(result.started).strftime("%Y-%m-%d_%H-%M-%S")
+    target_dir = os.path.join(outdir, domain_folder, datetime_folder)
+    os.makedirs(target_dir, exist_ok=True)
+
+    base = os.path.join(target_dir, "report")
     written: List[str] = []
 
     if "html" in formats:
@@ -534,7 +538,7 @@ def write_reports(
         written.append(path)
 
     if include_proposal or "proposal" in formats:
-        prop_path = base + "-proposal.md"
+        prop_path = os.path.join(target_dir, "proposal.md")
         with open(prop_path, "w", encoding="utf-8") as fh:
             fh.write(generate_proposal_markdown(result))
         written.append(prop_path)
