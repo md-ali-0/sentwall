@@ -105,6 +105,35 @@ python scan.py --generate-ci github
 python scan.py --generate-ci gitlab
 ```
 
+### ৩.৪. অ্যাটাক সারফেস ম্যাপ করতে (Recon)
+VulnScope একটা হোস্ট দেখে। কিন্তু ক্লায়েন্টের `dev.`, `old.`, `staging.`, `admin.` — এইগুলোই
+আসল ঝুঁকি, কারণ ওগুলো প্যাচ হয় না। `recon.py` পুরো এস্টেট খুঁজে বের করে:
+
+```bash
+# শুধু খোঁজো (passive + হালকা প্রোব)
+python recon.py example.com --authorized
+
+# খুঁজে বের করা প্রতিটা লাইভ হোস্টে স্ক্যানও চালাও
+python recon.py example.com --authorized --scan --max-scan 15
+```
+
+পাঁচটা ধাপে কাজ করে:
+
+1. **Certificate transparency** — `crt.sh` থেকে সেই ডোমেইনের যত সার্টিফিকেট হয়েছে, সব নাম
+2. **DNS brute force** — ~৭০টা সাধারণ প্রিফিক্স (`api`, `dev`, `staging`, `admin`...)
+3. **Resolve** — প্রতিটার IP
+4. **Fingerprint** — HTTP status, Server হেডার, পেজের title, টেক স্ট্যাক, সার্টিফিকেটের মেয়াদ
+5. **Scan** (ঐচ্ছিক) — প্রতিটা লাইভ হোস্টে VulnScope, ফলাফল একই টেবিলে
+
+আউটপুট: `recon-<domain>-<timestamp>.html / .md / .json / .csv` — এক টেবিলে সব হোস্ট,
+কোনটায় critical, কোন সার্টিফিকেট ৩০ দিনে শেষ।
+
+> `--authorized` বাধ্যতামূলক। ডিসকভারি পাবলিক সার্টিফিকেট ডেটা দেখে, কিন্তু fingerprint
+> আর scan ধাপ আসল রিকোয়েস্ট পাঠায় — সেটার জন্য লিখিত অনুমতি লাগবে।
+
+**সীমা:** `crt.sh` মাঝে মাঝে rate limit করে (টুল তিনবার retry করে, তবু খালি আসতে পারে)।
+DNS brute force শুধু বিল্ট-ইন ছোট লিস্টে চলে — বড় লিস্ট লাগলে `--wordlist` দাও।
+
 ---
 
 ## ৪. ১৫টি পূর্ণাঙ্গ সিকিউরিটি মডিউল

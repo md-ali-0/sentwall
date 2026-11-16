@@ -18,7 +18,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
-from .report import CSS
+from .styles import BASE_CSS
 
 E = html.escape
 
@@ -431,7 +431,7 @@ def render_html(diff: DiffResult) -> str:
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Retest — {E(diff.host)}</title>
-<style>{CSS}{RETEST_CSS}</style></head>
+<style>{BASE_CSS}{RETEST_CSS}</style></head>
 <body><div class="wrap">
 
 <div class="top-toolbar">

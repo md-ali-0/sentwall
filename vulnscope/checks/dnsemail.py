@@ -449,7 +449,10 @@ def _crt_sh_subdomains(ctx: ScanContext, domain: str) -> List[str]:
     for row in data:
         for name in str(row.get("name_value", "")).split("\n"):
             name = name.strip().lower().lstrip("*.")
-            if name.endswith(domain) and name != domain and " " not in name:
+            # crt.sh also returns subject email addresses; those are not hostnames
+            if "@" in name or "*" in name or " " in name:
+                continue
+            if name.endswith(domain) and name != domain:
                 names.add(name)
     return sorted(names)
 
