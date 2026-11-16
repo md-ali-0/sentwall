@@ -1,8 +1,8 @@
-# VulnScope Enterprise 2.0 — Next-Gen Security Assessment & Client Pitch Studio
+# VulnScope Enterprise 2.0 — Next-Gen Security Assessment & Client Pitch CLI
 
 > **"যেটা আগে কেউ বানায়নি"** — এটি শুধু একটি সাধারণ ভ্যালনারেবিলিটি স্ক্যানার নয়; এটি সম্পূর্ণ একটি স্বয়ংক্রিয় **Autonomous Cybersecurity Assessment & Client Conversion Platform**।
 
-একটি মাত্র কমান্ড বা ব্রাউজার স্টুডিও ইন্টারফেসের মাধ্যমে যেকোনো ওয়েবসাইটের সম্পূর্ণ অ্যাটাক সারফেস স্ক্যান করে, দুর্বলতাগুলোর লাইভ ভেরিফিকেশন করে, সার্ভার ফিক্স তৈরি করে এবং ক্লায়েন্টকে সরাসরি দেওয়ার জন্য **এক্সিকিউটিভ পিচ ডেক, আর্থিক ক্ষতির হিসাব (Financial Exposure ROI), SARIF এবং চুক্তিপত্র (SOW)** তৈরি করে দেয়।
+একটি মাত্র কমান্ডে যেকোনো ওয়েবসাইটের সম্পূর্ণ অ্যাটাক সারফেস স্ক্যান করে, দুর্বলতাগুলোর লাইভ ভেরিফিকেশন করে, সার্ভার ফিক্স তৈরি করে এবং ক্লায়েন্টকে সরাসরি দেওয়ার জন্য **এক্সিকিউটিভ পিচ ডেক, আর্থিক ক্ষতির হিসাব (Financial Exposure ROI), SARIF এবং চুক্তিপত্র (SOW)** তৈরি করে দেয়।
 
 ---
 
@@ -10,13 +10,12 @@
 
 | ফিচার | বিস্তারিত বিবরণ |
 |---|---|
-| ⚡ **Cyberpunk Web Studio GUI** | কোনো npm/node লাগবে না! শুধু `python scan.py --serve` দিলেই লাইভ আধুনিক ডার্ক-মোড স্টুডিও চালু হয়। |
-| 🕸️ **Interactive Attack Topology** | HTML5 ক্যানভাস ভিত্তিক লাইভ নোড গ্রাফ — Target ➔ DNS ➔ Ports ➔ Cloud ➔ Vulnerabilities। |
 | 🛡️ **১৫টি শক্তিশালী অডিট মডিউল** | GraphQL, Swagger/OpenAPI, JWT, AWS S3/Firebase, Shannon Entropy Secret Hunter, SSRF, WAF Bypass, ইত্যাদিসহ ২৫০+ চেক। |
-| 🎯 **১-ক্লিক লাইভ PoC ও Re-Test** | ব্রাউজার থেকেই সাথে সাথে ভালনারেবিলিটি রি-টেস্ট করা যায় এবং cURL / Python PoC স্ক্রিপ্ট কপি করা যায়। |
+| 📁 **Domain ও Date-Time ভিত্তিক রিপোর্ট ফোল্ডার** | প্রতিটি স্ক্যানের রিপোর্ট সুশৃঙ্খলভাবে `reports/<domain>/<date-time>/` ডিরেক্টরিতে স্বয়ংক্রিয়ভাবে জমা হয়। |
+| 🎯 **লাইভ PoC ও Re-Test কমান্ড** | প্রতিটি ত্রুটির জন্য রেডি cURL কমান্ড ও পাইথন ভেরিফিকেশন স্ক্রিপ্ট স্বয়ংক্রিয়ভাবে তৈরি হয়ে রিপোর্টে থাকে। |
 | 💰 **Financial ROI & Loss Estimator** | IBM Ponemon ও GDPR ডেটা অনুযায়ী ক্লায়েন্টের সম্ভাব্য সাইবার ব্রিচ ক্ষতির হিসাব ($) বের করে দেয়। |
 | 📜 **Client Pitch & Proposal Engine** | ৩টি সার্ভিস প্যাকেজ (Tier 1 Quick Wins, Tier 2 Full Fix, Tier 3 Retainer) সহ রেডি চুক্তিপত্র। |
-| 🔄 **Before vs. After Delta Re-Scan** | `python scan.py --diff scan1.json scan2.json` দিয়ে ক্লায়েন্টকে দেখানো যায় আপনার ফিক্সের পর স্কোর F থেকে A হয়েছে। |
+| 🔄 **Before vs. After Delta Re-Scan** | `python scan.py --diff before.json after.json` দিয়ে ক্লায়েন্টকে দেখানো যায় আপনার ফিক্সের পর স্কোর F থেকে A হয়েছে। |
 | 🚀 **SARIF 2.1.0 & CI/CD Generator** | GitHub Security Tab ও GitLab CI-তে সরাসরি ইন্টিগ্রেশনের জন্য ১-ক্লিকে SARIF এবং পাইপলাইন ফাইল জেনারেট। |
 
 ---
@@ -33,16 +32,11 @@ pip install -r requirements.txt
 
 ## ৩. ব্যবহারের নিয়মাবলী
 
-### ৩.১. Cyberpunk Web Studio চালু করতে (GUI মোড)
-```bash
-python scan.py --serve --port 8888
-```
-এরপর ব্রাউজারে `http://127.0.0.1:8888` ওপেন করুন! এখানে গ্রাফ, লাইভ স্ক্যান, ফিল্টার এবং এক্সপোর্ট সেন্টার পাওয়া যাবে।
-
-### ৩.২. CLI স্ক্যান (টার্মিনাল থেকে)
+### ৩.১. টার্মিনাল থেকে স্ক্যান (CLI)
 ```bash
 # ১. সাধারণ স্ক্যান (HTML, PDF, JSON, SARIF, CSV সহ)
 python scan.py https://client-site.com --authorized
+# অথবা: python -m vulnscope https://client-site.com --authorized
 
 # ২. ক্লায়েন্ট পিচ সেকশন, কাস্টম নাম ও PDF সহ
 python scan.py https://client-site.com --authorized --pitch \
@@ -55,17 +49,17 @@ python scan.py client-site.com --authorized --profile deep
 python scan.py https://api.client.com --authorized --profile api
 ```
 
-### ৩.৩. ক্লায়েন্টকে কাজ প্রমাণের জন্য (Delta Re-Scan Comparison)
-কাজ করার আগে প্রথম স্ক্যানটি রাখুন (`reports/before.json`) এবং ফিক্স করার পর দ্বিতীয় স্ক্যানটি চালান (`reports/after.json`):
+### ৩.২. ক্লায়েন্টকে কাজ প্রমাণের জন্য (Delta Re-Scan Comparison)
+কাজ করার আগে প্রথম স্ক্যানটি রাখুন এবং ফিক্স করার পর দ্বিতীয় স্ক্যানটি চালিয়ে তুলনা করুন:
 ```bash
-python scan.py --diff reports/before.json reports/after.json
+python scan.py --diff reports/target/2026-11-16_10-00-00/report.json reports/target/2026-11-16_12-00-00/report.json
 ```
 এটি সাথে সাথে ক্লায়েন্টের জন্য রিপোর্ট দিবে:
 - কতটি সমস্যা সমাধান (Resolved) হয়েছে
 - রিস্ক স্কোর কতটা কমেছে (যেমন: ৮৫ থেকে নেমে ১২ হয়েছে)
 - সিকিউরিটি গ্রেড F থেকে B বা A হয়েছে
 
-### ৩.৪. CI/CD পাইপলাইন তৈরি করতে
+### ৩.৩. CI/CD পাইপলাইন তৈরি করতে
 ```bash
 # GitHub Actions এর জন্য
 python scan.py --generate-ci github
@@ -98,13 +92,13 @@ python scan.py --generate-ci gitlab
 
 ## ৫. আউটপুট ও রিপোর্টস
 
-প্রতিটি স্ক্যানে তৈরি হয়:
-- `reports/*.html` — ইন্টারঅ্যাকটিভ ডার্ক/লাইট মোড, ফিল্টার ও PoC কপি বাটন সহ ব্রাউজারে দেখার রিপোর্ট।
-- `reports/*.pdf` — প্রিন্ট-রেডি এক্সিকিউটিভ ক্লায়েন্ট পিডিএফ।
-- `reports/*.sarif` — গিটহাব ও গিটল্যাব ড্যাশবোর্ডে আপলোডের জন্য অফিসিয়াল OASIS SARIF 2.1.0 ফাইল।
-- `reports/*.csv` — এক্সেল বা স্প্রেডশীটে অ্যানালাইসিসের জন্য ডেটা।
-- `reports/*.json` — সম্পূর্ণ র ডেটা।
-- `reports/*-proposal.md` — ক্লায়েন্টের সইয়ের জন্য রেডি বাণিজ্যিক প্রস্তাব ও কাজের চুক্তিপত্র (Statement of Work)।
+প্রতিটি স্ক্যানে `reports/<domain>/<date-time>/` ফোল্ডারে সুশৃঙ্খলভাবে তৈরি হয়:
+- `report.html` — ইন্টারঅ্যাকটিভ ডার্ক মোড, ফিল্টার ও PoC কপি বাটন সহ ব্রাউজারে দেখার স্বয়ংসম্পূর্ণ অফলাইন অডিট রিপোর্ট।
+- `report.pdf` — প্রিন্ট-রেডি এক্সিকিউটিভ ক্লায়েন্ট পিডিএফ।
+- `report.sarif` — গিটহাব ও গিটল্যাব ড্যাশবোর্ডে আপলোডের জন্য অফিসিয়াল OASIS SARIF 2.1.0 ফাইল।
+- `report.csv` — এক্সেল বা স্প্রেডশীটে অ্যানালাইসিসের জন্য ডেটা।
+- `report.json` — সম্পূর্ণ র ডেটা।
+- `proposal.md` — ক্লায়েন্টের সইয়ের জন্য রেডি বাণিজ্যিক প্রস্তাব ও কাজের চুক্তিপত্র (Statement of Work)।
 
 ---
 

@@ -4,9 +4,8 @@
 Usage:
     python scan.py https://example.com --authorized
     python scan.py example.com --deep --subdomains --pitch --client "Acme Ltd"
-    python scan.py --serve --port 8888              # Launch Cyberpunk Studio Web GUI
-    python scan.py --diff scan1.json scan2.json     # Before vs After delta comparison
-    python scan.py --generate-ci github             # Generate CI/CD workflow
+    python scan.py --diff reports/target/time1/report.json reports/target/time2/report.json
+    python scan.py --generate-ci github
 
 Only scan systems you own or have written permission to test.
 """
@@ -36,7 +35,7 @@ BANNER = r"""
    \ V / | |_| | | | | |___) | (_| (_) | |_) |  __/
     \_/   \__,_|_|_| |_|____/ \___\___/| .__/ \___|
                                        |_|
- automated web security assessment & studio v{ver}
+ automated web security assessment v{ver}
 """
 
 USE_COLOR = sys.stdout.isatty() and os.environ.get("NO_COLOR") is None
@@ -113,13 +112,12 @@ def export_pdf(html_path: str, pdf_path: str) -> bool:
 def parse_args(argv: List[str]) -> argparse.Namespace:
     p = argparse.ArgumentParser(
         prog="scan.py",
-        description="VulnScope Enterprise - Automated web security assessment with client-ready reporting & web studio.",
+        description="VulnScope Enterprise - Automated web security assessment with client-ready reporting.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""examples:
   python scan.py https://example.com --authorized
   python scan.py example.com --authorized --deep --subdomains
-  python scan.py --serve --port 8888
-  python scan.py --diff reports/scan1.json reports/scan2.json
+  python scan.py --diff reports/target/time1/report.json reports/target/time2/report.json
   python scan.py https://shop.example.com --authorized --pitch \\
       --client "Acme Ltd" --auditor "Your Name" --out reports
 """,
@@ -127,9 +125,6 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
     p.add_argument("target", nargs="?", default="", help="URL or domain to assess, e.g. https://example.com")
     p.add_argument("-y", "--authorized", action="store_true",
                    help="confirm you have written authorisation (skips the prompt)")
-    p.add_argument("--serve", "--gui", "-s", action="store_true",
-                   help="launch the embedded Cyberpunk Web Studio GUI")
-    p.add_argument("--port", type=int, default=8888, help="port for the web studio GUI (default: 8888)")
     p.add_argument("--diff", nargs=2, metavar=("BASELINE", "CURRENT"),
                    help="compare two scan JSON results to compute the remediation delta")
     p.add_argument("--generate-ci", choices=["github", "gitlab"],
@@ -175,13 +170,7 @@ def main(argv: List[str]) -> int:
     else:
         say(BANNER.format(ver=__version__))
 
-    # Mode 1: Web Studio GUI
-    if args.serve:
-        from vulnscope.server import start_server
-        start_server(port=args.port)
-        return 0
-
-    # Mode 2: CI/CD Workflow Generation
+    # Mode 1: CI/CD Workflow Generation
     if args.generate_ci:
         if args.generate_ci == "github":
             content = generate_github_workflow()
@@ -198,7 +187,7 @@ def main(argv: List[str]) -> int:
             say(c(f"  [+] Generated GitLab CI security configuration in: {out_file}", "1;32"))
         return 0
 
-    # Mode 3: Delta Comparison
+    # Mode 2: Delta Comparison
     if args.diff:
         b_file, c_file = args.diff
         if not os.path.exists(b_file) or not os.path.exists(c_file):
@@ -215,9 +204,9 @@ def main(argv: List[str]) -> int:
         say(f"  Verdict       : {diff.verdict}\n")
         return 0
 
-    # Mode 4: Target Assessment
+    # Mode 3: Target Assessment
     if not args.target:
-        say(c("  ! Error: Please specify a target URL, or run with --serve for the Web Studio.", "1;31"))
+        say(c("  ! Error: Please specify a target URL to assess.", "1;31"))
         say("    Usage: python scan.py https://target.com --authorized")
         return 2
 
@@ -341,8 +330,12 @@ def main(argv: List[str]) -> int:
     for p in paths:
         say(f"   {p}")
     say("")
-    say(c("  Launch Web Studio to view interactive attack topology & re-test vulnerabilities:", "0;37"))
-    say(c("  python scan.py --serve --port 8888\n", "1;36"))
+    html_report = next((p for p in paths if p.endswith(".html")), "")
+    if html_report:
+        abs_html = os.path.abspath(html_report).replace(os.sep, "/")
+        say(c(f"  Open report in your browser to inspect interactive dashboard:\n  file:///{abs_html}\n", "0;37"))
+    else:
+        say("")
     return 0
 
 
