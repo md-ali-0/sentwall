@@ -380,7 +380,7 @@ def _baseline(ctx: ScanContext):
     samples = []
     for _ in range(2):
         token = "".join(random.choices(string.ascii_lowercase + string.digits, k=12))
-        r = ctx.http.get(f"{ctx.base_url.rstrip('/')}/vulnscope-{token}", allow_redirects=True, limit=20000)
+        r = ctx.http.get(f"{ctx.base_url.rstrip('/')}/sentwall-{token}", allow_redirects=True, limit=20000)
         title = ""
         m = re.search(r"<title[^>]*>(.*?)</title>", r.text, re.I | re.S)
         if m:

@@ -1,4 +1,4 @@
-"""Deliberately vulnerable local app used to validate VulnScope's detections.
+"""Deliberately vulnerable local app used to validate Sentwall's detections.
 
 Never expose this to a network. Run:  python tests/vulnerable_app.py
 

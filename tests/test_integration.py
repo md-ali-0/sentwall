@@ -6,12 +6,12 @@ import unittest
 from http.server import ThreadingHTTPServer
 
 from tests.vulnerable_app import Handler
-from vulnscope.context import Options, ScanContext
-from vulnscope.crawl import crawl
-from vulnscope.checks import run_all
-from vulnscope.models import ScanResult
-from vulnscope.net import Http
-from vulnscope.report import write_reports
+from sentwall.context import Options, ScanContext
+from sentwall.crawl import crawl
+from sentwall.checks import run_all
+from sentwall.models import ScanResult
+from sentwall.net import Http
+from sentwall.report import write_reports
 
 TEST_PORT = 8199
 BASE_URL = f"http://127.0.0.1:{TEST_PORT}"

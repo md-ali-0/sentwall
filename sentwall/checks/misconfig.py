@@ -12,8 +12,8 @@ from ..models import Finding, Severity
 NAME = "misconfig"
 LABEL = "Server & application misconfiguration"
 
-CANARY_ORIGIN = "https://vulnscope-canary.example"
-CANARY_HOST = "vulnscope-canary.example"
+CANARY_ORIGIN = "https://sentwall-canary.example"
+CANARY_HOST = "sentwall-canary.example"
 
 _STACK_TRACE_MARKERS = [
     (r"Traceback \(most recent call last\)", "Python traceback"),
@@ -220,7 +220,7 @@ def _check_cors(ctx: ScanContext) -> List[Finding]:
 
 def _check_verbose_errors(ctx: ScanContext) -> List[Finding]:
     token = "".join(random.choices(string.ascii_lowercase + string.digits, k=10))
-    url = ctx.base_url.rstrip("/") + f"/vulnscope-{token}.php"
+    url = ctx.base_url.rstrip("/") + f"/sentwall-{token}.php"
     r = ctx.http.get(url, allow_redirects=True)
     if not r.status or r.status < 400:
         return []

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""VulnScope CLI entrypoint for `python -m vulnscope`."""
+"""Sentwall CLI entrypoint for `python -m sentwall`."""
 import os
 import sys
 

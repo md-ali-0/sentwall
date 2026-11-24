@@ -3,7 +3,7 @@ from __future__ import annotations
 
 
 def generate_github_workflow(target_secret_name: str = "TARGET_URL") -> str:
-    return f"""name: VulnScope Security Gate
+    return f"""name: Sentwall Security Gate
 
 on:
   push:
@@ -32,11 +32,11 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
 
-      - name: Install VulnScope Dependencies
+      - name: Install Sentwall Dependencies
         run: |
           pip install requests cryptography
 
-      - name: Run VulnScope Scan
+      - name: Run Sentwall Scan
         run: |
           python scan.py "${{{{ secrets.{target_secret_name} || 'http://127.0.0.1:8080' }}}}" \\
             --authorized \\
@@ -48,13 +48,13 @@ jobs:
         if: always()
         with:
           sarif_file: reports/
-          category: vulnscope-security-assessment
+          category: sentwall-security-assessment
 
       - name: Archive HTML & PDF Reports
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: vulnscope-security-reports
+          name: sentwall-security-reports
           path: reports/
 """
 
@@ -64,7 +64,7 @@ def generate_gitlab_ci() -> str:
   - test
   - security
 
-vulnscope-security-scan:
+sentwall-security-scan:
   stage: security
   image: python:3.11-slim
   before_script:

@@ -252,10 +252,10 @@ footer.rep{margin-top:44px; padding-top:16px; border-top:1px solid var(--line);
   <div class="tags">CVSS ~9.3 &middot; CWE-942 &middot; A01:2021 Broken Access Control &middot; confidence: certain</div>
 
   <h4>What we found</h4>
-  <p>http://127.0.0.1:8099/ returned Access-Control-Allow-Origin: https://vulnscope-canary.example together with Access-Control-Allow-Credentials: true. Any website on the internet can therefore make authenticated cross-origin requests and read the responses as the logged-in victim.</p>
+  <p>http://127.0.0.1:8099/ returned Access-Control-Allow-Origin: https://sentwall-canary.example together with Access-Control-Allow-Credentials: true. Any website on the internet can therefore make authenticated cross-origin requests and read the responses as the logged-in victim.</p>
   <h4>Business impact</h4><p>Complete account takeover from a single malicious link: the attacker reads profile data, API tokens and personal information, and can perform actions on the victim&#x27;s behalf.</p>
   <h4>Evidence</h4>
-  <ul class="evidence"><li>GET http://127.0.0.1:8099/</li><li>Origin: https://vulnscope-canary.example</li><li>Access-Control-Allow-Origin: https://vulnscope-canary.example</li><li>Access-Control-Allow-Credentials: true</li></ul>
+  <ul class="evidence"><li>GET http://127.0.0.1:8099/</li><li>Origin: https://sentwall-canary.example</li><li>Access-Control-Allow-Origin: https://sentwall-canary.example</li><li>Access-Control-Allow-Credentials: true</li></ul>
   <h4>How to fix it</h4><pre class="fix">Never reflect the Origin header blindly. Use a strict allow-list:
 if origin in TRUSTED_ORIGINS: set ACAO=origin, ACAC=true
 else: do not send CORS headers at all.
@@ -602,7 +602,7 @@ nginx: if ($request_method = TRACE) { return 405; }</pre>
   <p>The &#x27;url&#x27; parameter controls where the user is sent, and it accepts any external host. The application will happily redirect visitors to an attacker-controlled site while the link still starts with your domain.</p>
   <h4>Business impact</h4><p>Highly effective phishing: &#x27;https://yourdomain/login?next=evil.com&#x27; looks trustworthy, and is also used to steal OAuth tokens and bypass allow-lists.</p>
   <h4>Evidence</h4>
-  <ul class="evidence"><li>GET http://127.0.0.1:8099/redirect?url=https%3A%2F%2Fvulnscope-canary.invalid%2Fpoc</li><li>Location: https://vulnscope-canary.invalid/poc</li></ul>
+  <ul class="evidence"><li>GET http://127.0.0.1:8099/redirect?url=https%3A%2F%2Fsentwall-canary.invalid%2Fpoc</li><li>Location: https://sentwall-canary.invalid/poc</li></ul>
   <h4>How to fix it</h4><pre class="fix">Accept only relative paths, or validate against an allow-list of permitted hosts before redirecting. Reject values containing &#x27;://&#x27; and &#x27;//&#x27;.</pre>
   
   <div class="foot">
@@ -1052,7 +1052,7 @@ Cross-Origin-Opener-Policy: same-origin</pre>
 </section>
 
   <footer class="rep">
-    <span>VS-4AC52381 &middot; VulnScope automated assessment</span>
+    <span>VS-4AC52381 &middot; Sentwall automated assessment</span>
     <span>External, non-intrusive testing &middot; 16 November 2026</span>
   </footer>
 </div>

@@ -6,7 +6,7 @@ import tempfile
 import unittest
 
 from retest import _finding_lines, _fmt_delta, _rows, main, parse_args
-from vulnscope.diff import compare_scans
+from sentwall.diff import compare_scans
 
 
 class TestRetest(unittest.TestCase):

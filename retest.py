@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""VulnScope Retest - Automated remediation verification & delta comparison suite.
+"""Sentwall Retest - Automated remediation verification & delta comparison suite.
 
 Usage:
     python retest.py before.json after.json          # Offline comparison of two scans
@@ -18,14 +18,14 @@ import sys
 import time
 from typing import Any, Dict, List, Optional
 
-from vulnscope import __version__, ui
-from vulnscope.checks import run_all
-from vulnscope.context import Options, ScanContext
-from vulnscope.crawl import crawl
-from vulnscope.diff import SEVERITIES, compare_files, compare_scans, write_reports as write_diff_reports
-from vulnscope.models import ScanResult, Severity
-from vulnscope.net import Http, normalise_target
-from vulnscope.report import write_reports as write_scan_reports
+from sentwall import __version__, ui
+from sentwall.checks import run_all
+from sentwall.context import Options, ScanContext
+from sentwall.crawl import crawl
+from sentwall.diff import SEVERITIES, compare_files, compare_scans, write_reports as write_diff_reports
+from sentwall.models import ScanResult, Severity
+from sentwall.net import Http, normalise_target
+from sentwall.report import write_reports as write_scan_reports
 
 SEV_ORDER = ["critical", "high", "medium", "low", "info"]
 
@@ -87,7 +87,7 @@ def run_live_retest_scan(baseline_file: str, out_dir: str = "reports") -> str:
         raise ValueError("Could not find 'target' or 'host' in baseline JSON report.")
 
     profile = base_data.get("profile", "standard")
-    auditor = base_data.get("auditor", "VulnScope Retest")
+    auditor = base_data.get("auditor", "Sentwall Retest")
     client = base_data.get("client", "")
 
     base_url, host = normalise_target(target)
@@ -141,7 +141,7 @@ def run_live_retest_scan(baseline_file: str, out_dir: str = "reports") -> str:
 def parse_args(argv: List[str]) -> argparse.Namespace:
     p = argparse.ArgumentParser(
         prog="retest",
-        description="VulnScope Retest - Automated remediation verification & delta comparison suite.",
+        description="Sentwall Retest - Automated remediation verification & delta comparison suite.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""examples:
   python retest.py before.json after.json          # Offline comparison of two scans
@@ -162,7 +162,7 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
                    choices=["none", "critical", "high", "medium", "low"],
                    help="exit 1 if a finding at or above this severity is still open")
     p.add_argument("--quiet", action="store_true", help="only print the output paths")
-    p.add_argument("--version", action="version", version=f"VulnScope Retest {__version__}")
+    p.add_argument("--version", action="version", version=f"Sentwall Retest {__version__}")
     return p.parse_args(argv)
 
 

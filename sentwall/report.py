@@ -850,7 +850,7 @@ function toggleTheme() {
   const cur = document.documentElement.getAttribute('data-theme') || 'light';
   const nxt = cur === 'dark' ? 'light' : 'dark';
   document.documentElement.setAttribute('data-theme', nxt);
-  localStorage.setItem('vulnscope_report_theme', nxt);
+  localStorage.setItem('sentwall_report_theme', nxt);
 }
 function toggleDrawer(id) {
   const el = document.getElementById(id);
@@ -863,7 +863,7 @@ function copyCode(text) {
   });
 }
 window.addEventListener('DOMContentLoaded', () => {
-  const saved = localStorage.getItem('vulnscope_report_theme');
+  const saved = localStorage.getItem('sentwall_report_theme');
   if (saved) {
     document.documentElement.setAttribute('data-theme', saved);
   }
@@ -1074,7 +1074,7 @@ def _render_findings_table_group(
 def render_html(result: ScanResult, include_proposal: bool = False) -> str:
     """Render high-end executive audit report HTML matching client agency layout."""
     date_str = _dt.datetime.fromtimestamp(result.started).strftime("%b %d, %Y")
-    auditor = result.auditor or "VULNSCOPE"
+    auditor = result.auditor or "SENTWALL"
     client = result.client or "Executive Briefing"
 
     score = result.risk_score()
@@ -1362,7 +1362,7 @@ def render_markdown(result: ScanResult) -> str:
     c = result.counts()
     fin = result.financial_risk()
     lines = [
-        f"# VulnScope Comprehensive Security Assessment Report",
+        f"# Sentwall Comprehensive Security Assessment Report",
         "",
         f"**Target:** `{result.target}`  ",
         f"**Report ID:** `{result.scan_id}`  ",

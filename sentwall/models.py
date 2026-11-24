@@ -1,4 +1,4 @@
-"""Core data models for VulnScope.
+"""Core data models for Sentwall.
 
 Everything the checks produce is a ``Finding``. The reporter consumes a
 ``ScanResult``. Keeping this layer dependency-free makes it easy to export to
@@ -279,7 +279,7 @@ class ScanResult:
     @property
     def scan_id(self) -> str:
         raw = f"{self.target}|{int(self.started)}".encode()
-        return "VS-" + hashlib.sha1(raw).hexdigest()[:8].upper()
+        return "SW-" + hashlib.sha1(raw).hexdigest()[:8].upper()
 
     @property
     def duration(self) -> float:
@@ -529,9 +529,9 @@ class ScanResult:
                 {
                     "tool": {
                         "driver": {
-                            "name": "VulnScope",
+                            "name": "Sentwall",
                             "semanticVersion": "2.0.0",
-                            "informationUri": "https://github.com/vulnscope/vulnscope",
+                            "informationUri": "https://github.com/md-ali-0/sentwall",
                             "rules": rules,
                         }
                     },

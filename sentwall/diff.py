@@ -443,7 +443,7 @@ def render_html(diff: DiffResult) -> str:
 <body><div class="wrap">
 
 <div class="top-toolbar">
-  <div class="brand"><span class="dot"></span>VulnScope Retest</div>
+  <div class="brand"><span class="dot"></span>Sentwall Retest</div>
   <div class="actions-bar"><button class="btn btn-primary" onclick="window.print()">Print / PDF</button></div>
 </div>
 
@@ -506,7 +506,7 @@ def render_html(diff: DiffResult) -> str:
 
 <div class="rt-foot">
   Generated {_dt.datetime.now().strftime('%d %B %Y, %H:%M')} · findings matched by stable key ·
-  both scans produced by VulnScope against the same target with identical options.
+  both scans produced by Sentwall against the same target with identical options.
 </div>
 
 </div></body></html>"""

@@ -1,6 +1,6 @@
 """Attack-surface reconnaissance.
 
-VulnScope scans one host. This module answers the question a client actually
+Sentwall scans one host. This module answers the question a client actually
 asks: "what of mine is on the internet at all?"
 
 Pipeline: discover -> resolve -> fingerprint -> optionally scan -> one report.
@@ -255,10 +255,10 @@ def fingerprint(host: str, http: Http, do_tls: bool = True) -> HostInfo:
 
 # ---------------------------------------------------------------- scanning
 def scan_host(host: HostInfo, profile: str = "fast", out_dir: str = "") -> None:
-    """Run VulnScope against one host and fold the result back in."""
+    """Run Sentwall against one host and fold the result back in."""
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     scan_py = os.path.join(root, "scan.py")
-    tmp = out_dir or tempfile.mkdtemp(prefix="vulnscope-recon-")
+    tmp = out_dir or tempfile.mkdtemp(prefix="sentwall-recon-")
     cmd = [
         sys.executable, scan_py, host.url,
         "--authorized", "--profile", profile, "--quiet",
@@ -460,7 +460,7 @@ def render_html(result: ReconResult) -> str:
 <body><div class="wrap">
 
 <div class="top-toolbar">
-  <div class="brand"><span class="dot"></span>VulnScope Recon</div>
+  <div class="brand"><span class="dot"></span>Sentwall Recon</div>
   <div class="actions-bar"><button class="btn btn-primary" onclick="window.print()">Print / PDF</button></div>
 </div>
 

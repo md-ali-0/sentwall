@@ -1,9 +1,9 @@
-"""Unit tests for vulnscope.ui CLI styling engine."""
+"""Unit tests for sentwall.ui CLI styling engine."""
 import unittest
 import time
 
-from vulnscope.models import Finding, ScanResult, Severity
-from vulnscope.ui import (
+from sentwall.models import Finding, ScanResult, Severity
+from sentwall.ui import (
     badge_severity,
     chip_severity,
     draw_card,
@@ -30,7 +30,7 @@ class TestUiEngine(unittest.TestCase):
 
     def test_render_banner(self):
         banner = render_banner("1.0.0")
-        self.assertIn("VULNSCOPE ENTERPRISE", banner)
+        self.assertIn("SENTWALL ENTERPRISE", banner)
         self.assertIn("v1.0.0", banner)
 
     def test_draw_card(self):

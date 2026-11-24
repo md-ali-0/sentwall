@@ -1,12 +1,12 @@
-# SiteSentinel
+# Sentwall 🛡️
 
-> **Built a website with AI? Before you ship it, check its security.**
+> **Built a website with AI? Before you ship it, check its security with Sentwall.**
 
-SiteSentinel is a Python-based web security assessment toolkit for identifying common security misconfigurations and potential vulnerabilities in websites and web applications. It combines security checks, attack-surface discovery, structured reports, and before/after retesting in one command-line workflow.
+Sentwall is an open-source, Python-based web security assessment toolkit for identifying common security misconfigurations, exposed credentials, and vulnerabilities in websites and web applications. It combines automated security checks, attack-surface discovery, interactive client-ready reports, and before/after retesting in a single command-line workflow.
 
-Use it to review applications built with AI-assisted coding, validate security improvements, and produce reports that developers and website owners can act on.
+Use it to audit applications built with AI-assisted coding (Cursor, Claude, v0, Bolt, Lovable, ChatGPT), validate security hardening, and produce structured reports that developers and website owners can act on immediately.
 
-> **Important:** SiteSentinel is intended for authorized security testing only. Scan systems that you own or have explicit, written permission to assess. It is not a substitute for a professional penetration test, manual code review, or a complete security audit.
+> **Important:** Sentwall is intended for authorized security testing only. Scan systems that you own or have explicit, written permission to assess. It is not a substitute for a professional penetration test, manual code review, or a complete security audit.
 
 ---
 
@@ -21,7 +21,7 @@ Use it to review applications built with AI-assisted coding, validate security i
 
 ## What It Checks
 
-SiteSentinel includes checks in the following areas. Detection coverage depends on the target, configuration, network access, and scan profile.
+Sentwall includes checks in the following areas. Detection coverage depends on the target, configuration, network access, and scan profile.
 
 | Area | Examples |
 |---|---|
@@ -54,8 +54,8 @@ Some optional output formats or checks may require additional system packages or
 Clone the repository and install its dependencies:
 
 ```bash
-git clone https://github.com/md-ali-0/vulnscope.git
-cd vulnscope
+git clone https://github.com/md-ali-0/sentwall.git
+cd sentwall
 python -m pip install -r requirements.txt
 ```
 
@@ -225,7 +225,7 @@ The test suite includes checks for the scanner and its local demonstration appli
 - Use conservative scan settings on production systems. Some checks can generate traffic or trigger application defenses.
 - Do not use the tool to evade access controls, disrupt services, access data without permission, or test third-party infrastructure without authorization.
 - Keep scan reports private and redact sensitive information before sharing them.
-- SiteSentinel is provided for security assessment and educational use. No guarantee is made that a scan will identify every vulnerability or prevent compromise.
+- Sentwall is provided for security assessment and educational use. No guarantee is made that a scan will identify every vulnerability or prevent compromise.
 
 ## Contributing
 

@@ -1,6 +1,6 @@
 import unittest
 
-from vulnscope.recon import (
+from sentwall.recon import (
     HostInfo,
     ReconResult,
     _valid_name,

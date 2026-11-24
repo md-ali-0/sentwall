@@ -245,7 +245,7 @@ def _sqli_time(ctx: ScanContext, params) -> List[Finding]:
 # --------------------------------------------------------------- redirect
 def _open_redirect(ctx: ScanContext, params) -> List[Finding]:
     out: List[Finding] = []
-    canary_host = "vulnscope-canary.invalid"
+    canary_host = "sentwall-canary.invalid"
     for page_url, name, value in params:
         if name.lower() not in REDIRECT_PARAMS:
             continue
@@ -389,7 +389,7 @@ def _ssti(ctx: ScanContext, params) -> List[Finding]:
 # ------------------------------------------------------------------- CRLF
 def _crlf(ctx: ScanContext, params) -> List[Finding]:
     out: List[Finding] = []
-    marker = "VulnScope-Canary"
+    marker = "Sentwall-Canary"
     for page_url, name, value in params[:20]:
         payload = f"%0d%0a{marker}%3a%201"
         url = inject_param(page_url, name, payload)

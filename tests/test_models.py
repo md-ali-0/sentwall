@@ -1,5 +1,5 @@
 import unittest
-from vulnscope.models import Finding, ScanResult, Severity, quick_wins
+from sentwall.models import Finding, ScanResult, Severity, quick_wins
 
 
 class TestModels(unittest.TestCase):

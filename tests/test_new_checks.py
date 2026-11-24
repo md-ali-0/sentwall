@@ -1,6 +1,6 @@
 import unittest
-from vulnscope.checks.secrets import shannon_entropy, SECRET_RULES
-from vulnscope.checks.waf import WAF_SIGNATURES
+from sentwall.checks.secrets import shannon_entropy, SECRET_RULES
+from sentwall.checks.waf import WAF_SIGNATURES
 
 
 class TestNewChecks(unittest.TestCase):

@@ -67,14 +67,14 @@ Upgrade to Apache 2.4.51 or later immediately. As an interim mitigation, disable
 
 **Severity:** Critical · **CVSS:** 9.3 · **CWE-942** · A01:2021 Broken Access Control
 
-**What we found:** http://127.0.0.1:8099/ returned Access-Control-Allow-Origin: https://vulnscope-canary.example together with Access-Control-Allow-Credentials: true. Any website on the internet can therefore make authenticated cross-origin requests and read the responses as the logged-in victim.
+**What we found:** http://127.0.0.1:8099/ returned Access-Control-Allow-Origin: https://sentwall-canary.example together with Access-Control-Allow-Credentials: true. Any website on the internet can therefore make authenticated cross-origin requests and read the responses as the logged-in victim.
 
 **Impact:** Complete account takeover from a single malicious link: the attacker reads profile data, API tokens and personal information, and can perform actions on the victim's behalf.
 
 **Evidence:**
 - `GET http://127.0.0.1:8099/`
-- `Origin: https://vulnscope-canary.example`
-- `Access-Control-Allow-Origin: https://vulnscope-canary.example`
+- `Origin: https://sentwall-canary.example`
+- `Access-Control-Allow-Origin: https://sentwall-canary.example`
 - `Access-Control-Allow-Credentials: true`
 
 **Remediation:**
@@ -384,8 +384,8 @@ nginx: if ($request_method = TRACE) { return 405; }
 **Impact:** Highly effective phishing: 'https://yourdomain/login?next=evil.com' looks trustworthy, and is also used to steal OAuth tokens and bypass allow-lists.
 
 **Evidence:**
-- `GET http://127.0.0.1:8099/redirect?url=https%3A%2F%2Fvulnscope-canary.invalid%2Fpoc`
-- `Location: https://vulnscope-canary.invalid/poc`
+- `GET http://127.0.0.1:8099/redirect?url=https%3A%2F%2Fsentwall-canary.invalid%2Fpoc`
+- `Location: https://sentwall-canary.invalid/poc`
 
 **Remediation:**
 

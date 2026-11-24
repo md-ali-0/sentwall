@@ -1,5 +1,5 @@
 import unittest
-from vulnscope.diff import compare_scans
+from sentwall.diff import compare_scans
 
 
 class TestDiff(unittest.TestCase):

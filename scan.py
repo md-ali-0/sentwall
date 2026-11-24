@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""VulnScope Enterprise CLI - automated web security assessment and client report generator.
+"""Sentwall Enterprise CLI - automated web security assessment and client report generator.
 
 Usage:
     python scan.py https://example.com --authorized
@@ -17,16 +17,16 @@ import sys
 import time
 from typing import List
 
-from vulnscope import __version__
-from vulnscope.checks import run_all
-from vulnscope.ci import generate_github_workflow, generate_gitlab_ci
-from vulnscope.context import Options, ScanContext
-from vulnscope.crawl import crawl
-from vulnscope.diff import compare_files, write_reports as write_diff_reports
-from vulnscope.models import ScanResult, Severity
-from vulnscope.net import Http, normalise_target
-from vulnscope.report import write_reports
-from vulnscope.ui import (
+from sentwall import __version__
+from sentwall.checks import run_all
+from sentwall.ci import generate_github_workflow, generate_gitlab_ci
+from sentwall.context import Options, ScanContext
+from sentwall.crawl import crawl
+from sentwall.diff import compare_files, write_reports as write_diff_reports
+from sentwall.models import ScanResult, Severity
+from sentwall.net import Http, normalise_target
+from sentwall.report import write_reports
+from sentwall.ui import (
     bold,
     c_cyan,
     c_dark,
@@ -130,7 +130,7 @@ def export_pdf(html_path: str, pdf_path: str) -> bool:
 def parse_args(argv: List[str]) -> argparse.Namespace:
     p = argparse.ArgumentParser(
         prog="scan.py",
-        description="VulnScope Enterprise - Automated web security assessment with client-ready reporting.",
+        description="Sentwall Enterprise - Automated web security assessment with client-ready reporting.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""examples:
   python scan.py https://example.com --authorized
@@ -177,7 +177,7 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
     p.add_argument("--cookie", default="", help="raw Cookie header value")
     p.add_argument("--proxy", default="", help="proxy URL, e.g. http://127.0.0.1:8080")
     p.add_argument("--quiet", action="store_true", help="only print the final summary")
-    p.add_argument("--version", action="version", version=f"VulnScope {__version__}")
+    p.add_argument("--version", action="version", version=f"Sentwall {__version__}")
     return p.parse_args(argv)
 
 
@@ -305,7 +305,7 @@ def main(argv: List[str]) -> int:
     if args.generate_ci:
         if args.generate_ci == "github":
             content = generate_github_workflow()
-            out_file = ".github/workflows/vulnscope.yml"
+            out_file = ".github/workflows/sentwall.yml"
             os.makedirs(".github/workflows", exist_ok=True)
             with open(out_file, "w", encoding="utf-8") as fh:
                 fh.write(content)

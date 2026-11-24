@@ -15,8 +15,8 @@ import argparse
 import sys
 from typing import List
 
-from vulnscope import ui
-from vulnscope.recon import ReconResult, run, write_reports
+from sentwall import ui
+from sentwall.recon import ReconResult, run, write_reports
 
 
 def _log(msg: str, kind: str = "") -> None:
@@ -66,7 +66,7 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
     p.add_argument("--authorized", "-y", action="store_true",
                    help="confirm you have written permission to probe these hosts")
     p.add_argument("--scan", action="store_true",
-                   help="run a VulnScope scan against each live host")
+                   help="run a Sentwall scan against each live host")
     p.add_argument("--max-scan", type=int, default=10, help="cap how many hosts get scanned")
     p.add_argument("--profile", default="fast", choices=["fast", "standard", "deep", "api"])
     p.add_argument("--threads", type=int, default=12, help="concurrent workers (default 12)")
@@ -84,7 +84,7 @@ def main(argv: List[str]) -> int:
     args = parse_args(argv)
 
     print()
-    print(ui.c_cyan(ui.bold("  VULNSCOPE RECON")))
+    print(ui.c_cyan(ui.bold("  SENTWALL RECON")))
     print(ui.c_dark("  external attack surface mapping"))
     print()
 

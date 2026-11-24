@@ -65,7 +65,7 @@
     "cors": [
       {
         "url": "http://127.0.0.1:8099/",
-        "acao": "https://vulnscope-canary.example",
+        "acao": "https://sentwall-canary.example",
         "credentials": true
       }
     ],
@@ -130,15 +130,15 @@
       "title_bn": "",
       "severity": "critical",
       "category": "Misconfiguration",
-      "description": "http://127.0.0.1:8099/ returned Access-Control-Allow-Origin: https://vulnscope-canary.example together with Access-Control-Allow-Credentials: true. Any website on the internet can therefore make authenticated cross-origin requests and read the responses as the logged-in victim.",
+      "description": "http://127.0.0.1:8099/ returned Access-Control-Allow-Origin: https://sentwall-canary.example together with Access-Control-Allow-Credentials: true. Any website on the internet can therefore make authenticated cross-origin requests and read the responses as the logged-in victim.",
       "description_bn": "",
       "impact": "Complete account takeover from a single malicious link: the attacker reads profile data, API tokens and personal information, and can perform actions on the victim's behalf.",
       "impact_bn": "",
       "remediation": "Never reflect the Origin header blindly. Use a strict allow-list:\nif origin in TRUSTED_ORIGINS: set ACAO=origin, ACAC=true\nelse: do not send CORS headers at all.\nAlso reject the 'null' origin.",
       "evidence": [
         "GET http://127.0.0.1:8099/",
-        "Origin: https://vulnscope-canary.example",
-        "Access-Control-Allow-Origin: https://vulnscope-canary.example",
+        "Origin: https://sentwall-canary.example",
+        "Access-Control-Allow-Origin: https://sentwall-canary.example",
         "Access-Control-Allow-Credentials: true"
       ],
       "references": [],
@@ -677,8 +677,8 @@
       "impact_bn": "",
       "remediation": "Accept only relative paths, or validate against an allow-list of permitted hosts before redirecting. Reject values containing '://' and '//'.",
       "evidence": [
-        "GET http://127.0.0.1:8099/redirect?url=https%3A%2F%2Fvulnscope-canary.invalid%2Fpoc",
-        "Location: https://vulnscope-canary.invalid/poc"
+        "GET http://127.0.0.1:8099/redirect?url=https%3A%2F%2Fsentwall-canary.invalid%2Fpoc",
+        "Location: https://sentwall-canary.invalid/poc"
       ],
       "references": [],
       "cwe": "CWE-601",

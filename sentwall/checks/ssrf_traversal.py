@@ -111,7 +111,7 @@ def _check_prototype_pollution(ctx: ScanContext) -> List[Finding]:
         return findings
 
     target_url = ctx.pages[0].url
-    canary = "vulnscope_proto_check"
+    canary = "sentwall_proto_check"
     pollution_payload = f"__proto__[{canary}]=polluted&constructor.prototype.{canary}=polluted"
 
     parsed = urlparse(target_url)

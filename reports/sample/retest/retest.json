@@ -230,8 +230,8 @@
       "impact_bn": "",
       "remediation": "Accept only relative paths, or validate against an allow-list of permitted hosts before redirecting. Reject values containing '://' and '//'.",
       "evidence": [
-        "GET http://127.0.0.1:8099/redirect?url=https%3A%2F%2Fvulnscope-canary.invalid%2Fpoc",
-        "Location: https://vulnscope-canary.invalid/poc"
+        "GET http://127.0.0.1:8099/redirect?url=https%3A%2F%2Fsentwall-canary.invalid%2Fpoc",
+        "Location: https://sentwall-canary.invalid/poc"
       ],
       "references": [],
       "cwe": "CWE-601",

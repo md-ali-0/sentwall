@@ -1,4 +1,4 @@
-"""VulnScope Terminal UI Engine.
+"""Sentwall Terminal UI Engine.
 
 Zero-dependency, pure Python terminal styling system featuring:
 - Automatic Windows VT100 / Virtual Terminal Processing enablement.
@@ -175,12 +175,11 @@ def draw_card(
 def render_banner(version: str = "1.0.0") -> str:
     """Render dual-tone hacker cyberpunk ASCII banner."""
     raw_lines = [
-        r" __     __      _       ____                      ",
-        r" \ \   / /_   _| |_ __ / ___|  ___ ___  _ __   ___ ",
-        r"  \ \ / /| | | | | '_ \\___ \ / __/ _ \| '_ \ / _ " + "\\",
-        r"   \ V / | |_| | | | | |___) | (_| (_) | |_) |  __/",
-        r"    \_/   \__,_|_|_| |_|____/ \___\___/| .__/ \___|",
-        r"                                       |_|         ",
+        r"  ____             _                  _ _   ",
+        r" / ___|  ___ _ __ | |_ __      ____ _| | |  ",
+        r" \___ \ / _ \ '_ \| __\ \ /\ / / _` | | |  ",
+        r"  ___) |  __/ | | | |_ \ V  V / (_| | | |  ",
+        r" |____/ \___|_| |_|\__| \_/\_/ \__,_|_|_|  ",
     ]
 
     out = []
@@ -199,7 +198,7 @@ def render_banner(version: str = "1.0.0") -> str:
         out.append("  " + bold(rgb(r, g, b, line)))
 
     sub = (
-        f"  {c_emerald('⚡')} {bold(c_white('VULNSCOPE ENTERPRISE'))} "
+        f"  {c_emerald('⚡')} {bold(c_white('SENTWALL ENTERPRISE'))} "
         f"{c_dark('•')} {c_slate('Autonomous Web Security & Threat Audit Engine')} "
         f"{c_dark('•')} {c_cyan('v' + version)}"
     )
