@@ -2,6 +2,10 @@
 
 > **Built a website with AI? Before you ship it, check its security with Sentwall.**
 
+<p align="center">
+  <img src="assets/sentwall-preview.png" alt="Sentwall Security Scanner CLI" width="850">
+</p>
+
 Sentwall is an open-source, Python-based web security assessment toolkit for identifying common security misconfigurations, exposed credentials, and vulnerabilities in websites and web applications. It combines automated security checks, attack-surface discovery, interactive client-ready reports, and before/after retesting in a single command-line workflow.
 
 Use it to audit applications built with AI-assisted coding (Cursor, Claude, v0, Bolt, Lovable, ChatGPT), validate security hardening, and produce structured reports that developers and website owners can act on immediately.
